@@ -1,3 +1,8 @@
+/**
+ * enmus.rs
+ * - enum定義置き場
+ */
+
 // #[allow(unused_variables)]
 #[allow(dead_code)]
 #[derive(Debug)]
@@ -9,6 +14,7 @@ pub enum Side{
 
 #[allow(dead_code)]
 impl Side {
+	// Sideを反転させたコピーを返す
 	pub fn reverse(&self) -> Side{
 		// note: なんでこう書けないんだろ？
 		// if self == Side::A {

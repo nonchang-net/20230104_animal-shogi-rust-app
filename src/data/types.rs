@@ -1,4 +1,7 @@
-use std::collections::HashMap;
+/**
+ * 細かい型やstruct定義の一次置き場
+ * - 実装などが入ったものは順次独立したファイルにしていく
+ */
 
 use crate::data::enums::{
 	Koma,
@@ -12,26 +15,10 @@ pub struct Cell{
 	pub koma: Koma,
 }
 
-#[allow(dead_code)]
-#[derive(Debug)]
-pub struct Board{
-	// 盤情報の二次元配列
-	pub data: [[Cell; 3]; 4],
-
-	// それぞれのサイドの手駒sideをキーにしたKomaの配列
-	pub tegomas: HashMap<Side, Vec<Koma>>
-}
-
-#[allow(dead_code)]
-impl Board{
-	fn area(&self) -> u32 {
-		// self.width * self.height
-		return 123;
-	}
-}
-
-// structは初期値とかは作れない……？ テスト
-// pub struct BT1{
-//     pub test1: [[Cell]],
-//     pub test: [[Cell]] = [[Cell{side:Side.A}, Cell{side:Side.B}]],
+// セルのデータ操作関数をimpl
+// メモ: 多分ほとんどないけど、表示用implをmain.rs側に置いているので複数書けるのかチェック中
+// impl Cell {
+// 	pub fn test(&self) -> char {
+// 		' '
+// 	}
 // }
