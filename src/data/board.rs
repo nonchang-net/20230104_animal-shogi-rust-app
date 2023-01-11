@@ -30,9 +30,3 @@ impl Board{
 		return 123;
 	}
 }
-
-// structは初期値とかは作れない……？ テスト
-// pub struct BT1{
-//     pub test1: [[Cell]],
-//     pub test: [[Cell]] = [[Cell{side:Side.A}, Cell{side:Side.B}]],
-// }
