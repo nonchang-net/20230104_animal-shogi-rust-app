@@ -9,7 +9,7 @@ use crate::data::enums::{
 };
 
 #[allow(dead_code)]
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone)]
 pub struct Cell{
 	pub side: Side,
 	pub koma: Koma,

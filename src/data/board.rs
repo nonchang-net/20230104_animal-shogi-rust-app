@@ -11,8 +11,10 @@ use crate::data::types::{
 
 use super::enums::{Koma, Side};
 
+// type Tegomas = HashMap<Side, Vec<Koma>>;
+
 #[allow(dead_code)]
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Board{
 	// 盤情報の二次元配列
 	pub data: [[Cell; 3]; 4],

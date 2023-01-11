@@ -23,24 +23,24 @@ fn main() {
 	let _board = Board{
 		data: [
 			[
-				Cell{side: Side::B, koma:Koma::Kirin},
-				Cell{side: Side::B, koma:Koma::Lion},
-				Cell{side: Side::B, koma:Koma::Zou}
+				Cell{side: Side::B, koma: Koma::Kirin},
+				Cell{side: Side::B, koma: Koma::Lion},
+				Cell{side: Side::B, koma: Koma::Zou}
 			],
 			[
-				Cell{side: Side::Free, koma:Koma::Null},
-				Cell{side: Side::B, koma:Koma::Hiyoko},
-				Cell{side: Side::Free, koma:Koma::Null}
+				Cell{side: Side::Free, koma: Koma::Null},
+				Cell{side: Side::B, koma: Koma::Hiyoko},
+				Cell{side: Side::Free, koma: Koma::Null}
 			],
 			[
-				Cell{side: Side::Free, koma:Koma::Null},
-				Cell{side: Side::A, koma:Koma::Hiyoko},
-				Cell{side: Side::Free, koma:Koma::Null}
+				Cell{side: Side::Free, koma: Koma::Null},
+				Cell{side: Side::A, koma: Koma::Hiyoko},
+				Cell{side: Side::Free, koma: Koma::Null}
 			],
 			[
-				Cell{side: Side::A, koma:Koma::Zou},
-				Cell{side: Side::A, koma:Koma::Lion},
-				Cell{side: Side::A, koma:Koma::Kirin}
+				Cell{side: Side::A, koma: Koma::Zou},
+				Cell{side: Side::A, koma: Koma::Lion},
+				Cell{side: Side::A, koma: Koma::Kirin}
 			]
 		],
 		tegomas: HashMap::new()
@@ -59,7 +59,7 @@ fn main() {
 	// println!("side:reverse(): {:?}", Side::A.reverse());
 
 	// 盤面テスト
-	render(&_board);
+	println!("{}",_board.render());
 
 	// 入力ループテスト
 	// - TODO: 当面不要なので保留
@@ -80,52 +80,58 @@ fn get_input() -> String {
 }
 
 
-#[allow(dead_code)]
-fn render(board:&Board) {
-	// println!();
-	// println!("animal shogi: ver20230104.2006");
-	// println!();
-	// println!("  : ａ　ｂ　ｃ　: ----------------");
-	// println!("==:============ : Side.B captured:");
-	// println!(" 1:🐘Ｂ🦁Ｂ🦒Ｂ : none");
-	// println!(" 2:　　🐥Ｂ　　 : ----------------");
-	// println!(" 3:　　🐥Ａ　　 : Side.A captured:");
-	// println!(" 4:🦒Ａ🦁Ａ🐘Ａ : none");
-	// println!();
-	// println!("Side.A's turn. YOU ARE CHECKMATED!!!");
-	// println!("command: (? to show help. q to quit)");
-
-	println!(
-		//" 1:{}{}{} :",
-		// board.data[0][0].render(),
-		// board.data[0][1].render(),
-		// board.data[0][2].render()
-
-		"{}", board.render()
-	);
-}
-
 // Boardの表示用impl
 impl Board {
 	pub fn render(&self) -> String {
 		let mut result = String::new();
-		result.push_str("  : ａ　ｂ　ｃ　:\n");
-		result.push_str("==:============ :\n");
+
+		// ヘッダーとstatus枠表示
+		result.push_str("  : ａ　ｂ　ｃ　: Side.B captured\n");
+		result.push_str("==:============ : ");
+		result.push_str(self.render_motigoma(Side::B).as_str());
+		result.push('\n');
+
+		// セル表示開始
 		for (index, line) in self.data.iter().enumerate() {
 			result.push_str(format!(" {}:", index+1).as_str());
 			for cell in line.iter() {
 				result.push_str(cell.render().as_str())
 			}
-			result.push_str(" :\n")
+			// ステータス枠表示
+			match index {
+				0 => result.push_str(" : Side.A captured\n"),
+				1 => {
+					result.push_str(" : ");
+					result.push_str(self.render_motigoma(Side::A).as_str());
+					result.push('\n');
+				},
+				_ => result.push_str(" :\n")
+			}
 		}
-		return result
+		return result;
 	}
+	
+	pub fn render_motigoma(&self, side:Side) -> String {
+		let mut result = String::new();
+		let komalist = self.tegomas.get(&side);
+		match komalist {
+			Some(x) => for koma in x {
+				result.push(koma.render())
+			},
+			None => result.push_str("none")
+		}
+		return result;
+	}
+
+	// pub fn test2() -> &'static str{
+	// 	"test"
+	// }
+
 }
 
-// セルの表示用impl
-impl Cell {
-	pub fn render_koma(&self) -> char {
-		match self.koma {
+impl Koma {
+	pub fn render(&self) -> char {
+		match self {
 			Koma::Lion =>'🦁',
 			Koma::Hiyoko => '🐥',
 			Koma::Kirin => '🦒',
@@ -133,6 +139,14 @@ impl Cell {
 			Koma::Niwatori => '🐔',
 			_ => '　'
 		}
+	}
+}
+
+
+// セルの表示用impl
+impl Cell {
+	pub fn render_koma(&self) -> char {
+		self.koma.render()
 	}
 	pub fn render_side(&self) -> char {
 		match self.side {
