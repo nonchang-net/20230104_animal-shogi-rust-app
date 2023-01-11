@@ -15,10 +15,5 @@ pub struct Cell{
 	pub koma: Koma,
 }
 
-// セルのデータ操作関数をimpl
-// メモ: 多分ほとんどないけど、表示用implをmain.rs側に置いているので複数書けるのかチェック中
-// impl Cell {
-// 	pub fn test(&self) -> char {
-// 		' '
-// 	}
-// }
+
+

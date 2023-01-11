@@ -23,7 +23,7 @@ pub struct Board{
 
 #[allow(dead_code)]
 impl Board{
-	fn area(&self) -> u32 {
+	fn test(&self) -> u32 {
 		// self.width * self.height
 		return 123;
 	}

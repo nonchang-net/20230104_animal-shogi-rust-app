@@ -56,7 +56,7 @@ fn main() {
 	// dbg!(_board);
 	// println!("{:?}", _board);
 	// println!("{:?}", _cell);
-	println!("side:reverse(): {:?}", Side::A.reverse());
+	// println!("side:reverse(): {:?}", Side::A.reverse());
 
 	// 盤面テスト
 	render(&_board);
@@ -95,11 +95,31 @@ fn render(board:&Board) {
 	// println!("Side.A's turn. YOU ARE CHECKMATED!!!");
 	// println!("command: (? to show help. q to quit)");
 
-	println!(" 1:{}{}{} :",
-		board.data[0][0].render(),
-		board.data[0][1].render(),
-		board.data[0][2].render()
+	println!(
+		//" 1:{}{}{} :",
+		// board.data[0][0].render(),
+		// board.data[0][1].render(),
+		// board.data[0][2].render()
+
+		"{}", board.render()
 	);
+}
+
+// Boardの表示用impl
+impl Board {
+	pub fn render(&self) -> String {
+		let mut result = String::new();
+		result.push_str("  : ａ　ｂ　ｃ　:\n");
+		result.push_str("==:============ :\n");
+		for (index, line) in self.data.iter().enumerate() {
+			result.push_str(format!(" {}:", index+1).as_str());
+			for cell in line.iter() {
+				result.push_str(cell.render().as_str())
+			}
+			result.push_str(" :\n")
+		}
+		return result
+	}
 }
 
 // セルの表示用impl
