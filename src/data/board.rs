@@ -39,7 +39,14 @@ pub struct FlagBoard{
 
 #[allow(dead_code)]
 impl FlagBoard{
-    fn test(&self) -> u32{
-        return 234;
+    fn new(flag:bool) -> FlagBoard{
+		return FlagBoard {
+			data: [
+				[flag,flag,flag],
+				[flag,flag,flag],
+				[flag,flag,flag],
+				[flag,flag,flag]
+			]
+		};
     }
 }

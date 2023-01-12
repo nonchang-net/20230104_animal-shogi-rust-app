@@ -16,12 +16,6 @@ pub enum Side{
 impl Side {
 	// Sideを反転させたコピーを返す
 	pub fn reverse(&self) -> Side{
-		// note: なんでこう書けないんだろ？
-		// if self == Side::A {
-		//     return Side::B
-		// }else{
-		//     return Side::A
-		// }
 		match self {
 			Side::A => Side::B,
 			Side::B => Side::A,

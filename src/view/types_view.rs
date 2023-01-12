@@ -12,6 +12,7 @@ use crate::data::types::{
 
 // Sideの表示用実装
 impl Side {
+    /// Sideを&strで出力
 	pub fn render(&self) -> &str {
 		match self {
 			Side::A => "A",
@@ -21,8 +22,9 @@ impl Side {
 	}
 }
 
-
+/// Komaの表示用実装
 impl Koma {
+    /// Komaをcharで出力
 	pub fn render(&self) -> char {
 		match self {
 			Koma::Lion =>'🦁',
