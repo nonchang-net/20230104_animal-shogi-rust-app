@@ -30,3 +30,16 @@ impl Board{
 		return 123;
 	}
 }
+
+// 盤状態のフラグマップを表現する型
+#[derive(Debug)]
+pub struct FlagBoard{
+    pub data: [[bool; 3] ;4]
+}
+
+#[allow(dead_code)]
+impl FlagBoard{
+    fn test(&self) -> u32{
+        return 234;
+    }
+}
