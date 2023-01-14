@@ -46,7 +46,8 @@ impl Board {
 	// 持ち駒列を出力
 	pub fn render_motigoma(&self, side:Side) -> String {
 		let mut result = String::new();
-		let komalist = self.tegomas.get(&side);
+		let tegomas = self.tegomas.borrow();
+		let komalist = tegomas.get(&side);
 		match komalist {
 			Some(x) => for koma in x {
 				result.push(koma.render())

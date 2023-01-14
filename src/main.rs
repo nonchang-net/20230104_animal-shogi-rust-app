@@ -1,12 +1,9 @@
-// use std::str;
-use std::collections::HashMap;
 
 mod data;
 mod view;
 
 use crate::{
 	data::{
-		constants::INITIAL_BOARD_DATA,
 		enums::{
 			// Koma,
 			Side
@@ -24,7 +21,7 @@ use crate::{
 
 fn main() {
 
-	let _board = Board::new();
+	let mut _board = Board::new();
 
 	// Cell構造体の初期化テスト
 	// let _cell = Cell{
@@ -48,6 +45,9 @@ fn main() {
 	// for x in _board {
 	// 	println!("Cell: {:?}", x)
 	// }
+
+	let attackable_map = _board.get_or_create_attackable_map(&Side::A);
+	println!("attackable_map: {:?}", attackable_map.data)
 
 	// 入力ループテスト
 	// - TODO: 当面不要なので保留
