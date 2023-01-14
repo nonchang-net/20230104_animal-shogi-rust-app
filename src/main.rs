@@ -24,11 +24,7 @@ use crate::{
 
 fn main() {
 
-	// Board構造体の初期化テスト
-	let _board = Board{
-		data: INITIAL_BOARD_DATA,
-		tegomas: HashMap::new()
-	};
+	let _board = Board::new();
 
 	// Cell構造体の初期化テスト
 	// let _cell = Cell{
@@ -46,7 +42,12 @@ fn main() {
 	println!("");
 	println!("{}",_board.render());
 	println!("{}",_board.render_infomation(Side::A));
-	
+
+	// Board Iteratorのテスト
+	// TODO: _board.iter_all_cells()って書くにはどう実装したらいいのかな
+	// for x in _board {
+	// 	println!("Cell: {:?}", x)
+	// }
 
 	// 入力ループテスト
 	// - TODO: 当面不要なので保留
