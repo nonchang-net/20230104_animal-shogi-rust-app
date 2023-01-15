@@ -38,7 +38,7 @@ fn main() {
 	// 盤面テスト
 	println!("");
 	println!("{}",_board.render());
-	println!("{}",_board.render_infomation(Side::A));
+	println!("{}",_board.render_infomation(&Side::A));
 
 	// Board Iteratorのテスト
 	// TODO: _board.iter_all_cells()って書くにはどう実装したらいいのかな
@@ -46,8 +46,13 @@ fn main() {
 	// 	println!("Cell: {:?}", x)
 	// }
 
-	let attackable_map = _board.get_or_create_attackable_map(&Side::A);
-	println!("attackable_map: {:?}", attackable_map.data)
+	// DEBUG: attackable map取得テスト
+	// let attackable_map = _board.get_or_create_attackable_map(&Side::A);
+	// println!("attackable_map: {:?}", attackable_map.data);
+	// let attackable_map_a2 = _board.get_or_create_attackable_map(&Side::A);
+	// println!("attackable_map: {:?}", attackable_map_a2.data);
+	// let attackable_map_b = _board.get_or_create_attackable_map(&Side::B);
+	// println!("attackable_map: {:?}", attackable_map_b.data);
 
 	// 入力ループテスト
 	// - TODO: 当面不要なので保留

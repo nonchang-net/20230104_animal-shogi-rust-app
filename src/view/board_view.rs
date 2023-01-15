@@ -20,7 +20,7 @@ impl Board {
 		// ヘッダーとstatus枠表示
 		result.push_str("  : ａ　ｂ　ｃ　: Side.B captured\n");
 		result.push_str("==:============ : ");
-		result.push_str(self.render_motigoma(Side::B).as_str());
+		result.push_str(self.render_motigoma(&Side::B).as_str());
 		result.push('\n');
 
 		// セル表示開始
@@ -34,7 +34,7 @@ impl Board {
 				0 => result.push_str(" : Side.A captured\n"),
 				1 => {
 					result.push_str(" : ");
-					result.push_str(self.render_motigoma(Side::A).as_str());
+					result.push_str(self.render_motigoma(&Side::A).as_str());
 					result.push('\n');
 				},
 				_ => result.push_str(" :\n")
@@ -44,10 +44,10 @@ impl Board {
 	}
 	
 	// 持ち駒列を出力
-	pub fn render_motigoma(&self, side:Side) -> String {
+	pub fn render_motigoma(&self, side:&Side) -> String {
 		let mut result = String::new();
 		let tegomas = self.tegomas.borrow();
-		let komalist = tegomas.get(&side);
+		let komalist = tegomas.get(side);
 		match komalist {
 			Some(x) => for koma in x {
 				result.push(koma.render())
@@ -58,9 +58,9 @@ impl Board {
 	}
 
 	// 操作説明枠を表示
-	pub fn render_infomation(&self, side:Side) -> String {
+	pub fn render_infomation(&mut self, side:&Side) -> String {
 		let mut result = String::new();
-		let is_checkmate = false;
+		let is_checkmate = self.get_or_create_is_checkmate(side);
 		let checkmate_str = String::from("is checkmate.");
 		result.push_str(format!(
 			"Side.{}'s turn. {}\n",

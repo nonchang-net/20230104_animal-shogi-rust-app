@@ -6,6 +6,8 @@ use super::{
     }
 };
 
+#[allow(unused_variables)]
+
 /**
  * constants.rs
  * - 定数置き場
@@ -39,6 +41,8 @@ pub const INITIAL_BOARD_DATA: [[Cell; 3]; 4] = [
 
 // 駒の移動できる方向定義一覧
 // - Side::A（下）から見た時のpositionの配列
+
+// #[allow(never)]
 pub const KOMA_MOVERULE_HIYOKO: [Position; 1] = [
     Position{x:0, y:-1}
 ];

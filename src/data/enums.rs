@@ -28,7 +28,7 @@ impl Side {
 
 // #[allow(unused_variables)]
 #[allow(dead_code)]
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Eq, PartialEq, Hash, Copy, Clone)]
 pub enum Koma{
 	Null,
 	Lion,
