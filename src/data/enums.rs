@@ -52,3 +52,14 @@ impl Koma {
 		}
 	}
 }
+
+
+#[allow(dead_code)]
+#[derive(Debug, Eq, PartialEq, Hash, Copy, Clone)]
+pub enum SideState {
+	Playable, // ゲーム続行可能
+	GameOverWithCheckmate, // 評価ターン側にチェックメイト回避手がない
+	GameOverWithTryable, // 評価ターンの相手側のトライ回避手がない
+	GameOverWithStalemate, // ステイルメイト=生き残れる合法手が一つもない （※wikipediaによるとこうなる可能性はないはずなのだけど、このゲームではトライアブル評価をしているので発生しうる。合法手が全てトライアブル失敗というパターン）
+}
+

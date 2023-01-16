@@ -9,7 +9,7 @@ use crate::data::enums::{
 };
 
 #[allow(dead_code)]
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Eq, PartialEq, Hash, Copy, Clone)]
 // Board上の座標を示すタプル
 // - 「if i<0」判定をする可能性を鑑みて符号付き
 pub struct Position {
@@ -55,9 +55,10 @@ pub struct Put{
 #[allow(dead_code)]
 #[derive(Debug, Copy, Clone)]
 // 1手を示す構造体
+// - TODO: 必ずmove_handかput_handが存在する、と言う定義にしたいけど無理そう？
 pub struct Hand{
-	pub move_hand: Move,
-	pub put: Put
+	pub move_hand: Option<Move>,
+	pub put_hand: Option<Put>
 }
 
 // 盤上の1セルの状態
