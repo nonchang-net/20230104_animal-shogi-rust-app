@@ -119,7 +119,7 @@ impl Board{
 	// 手を反映したクローンを作成
 	// - 先読みに必要になる
 	// - トライアブル回避手の一覧
-	fn get_hand_applied_clone(&self, side:&Side, hand:&Hand) -> Board {
+	pub fn get_hand_applied_clone(&self, side:&Side, hand:&Hand) -> Board {
 		let mut cloned: Board = self.clone();
 		// sideの一手を適用する
 		cloned.apply(side, hand);
@@ -488,6 +488,13 @@ impl Board{
 		// 全ての合法手を追加
 		hands.append(&mut self.create_all_move_hands(side));
 		hands.append(&mut self.create_all_put_hands(side));
+
+		// handがない = ステイルメイト
+		// ※どうぶつしょうぎ(TM)のルールにおいてはチェスの意味でのステイルメイトは存在しない
+		// - 今回の実装ではトライ回避手を先に枝刈りしたので、「トライ失敗する手しか残っていない」場合に発生し得る想定
+		if hands.len() == 0{
+			self.set_side_state(side, &SideState::GameOverWithStalemate);
+		}
 
 		// hands.append(&mut self.create_all_move_hands(side));
 		return hands;
