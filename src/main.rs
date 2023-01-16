@@ -67,6 +67,7 @@ fn main() {
 struct Game{
 	board: Board,
 	current_side: Side,
+	current_turn: u32,
 	rng: ThreadRng,
 }
 
@@ -76,6 +77,7 @@ impl Game{
 		let _game = Self{
 			board: Board::new(),
 			current_side: Side::A,
+			current_turn: 1,
 			rng: rand::prelude::thread_rng(),
 		};
 		return _game;
@@ -96,12 +98,19 @@ impl Game{
 
 	// 相手ターンにして一手進める
 	pub fn next(&mut self) {
+
 		// ランダムな手を一つ選択する
 		let hands = self.board.get_or_create_valid_hands(&self.current_side);
 		let index = self.rng.gen_range(0, hands.len());
+
 		// ランダムに打つ
-		self.board = self.board.get_hand_applied_clone(&self.current_side, &hands[index]);
+		// self.board = self.board.get_hand_applied_clone(&self.current_side, &hands[index]);
+		// TEST: 実行時panicが出ているので、試しにboard.clone()してからさらにapplied_clone()を取得してみる……。
+		// → 何度か試したらやはり同じところでエラー。
+		self.board = self.board.clone().get_hand_applied_clone(&self.current_side, &hands[index]);
+
 		// 次のターンに変更する
+		self.current_turn += 1;
 		self.current_side = self.current_side.reverse();
 	}
 
@@ -109,6 +118,8 @@ impl Game{
 	fn show(&mut self) {
 		println!("{}",self.board.render());
 		println!("{}",self.board.render_infomation(&self.current_side));
+
+		println!("current turn: {}", self.current_turn);
 	}
 
 	// CUIから一列取得

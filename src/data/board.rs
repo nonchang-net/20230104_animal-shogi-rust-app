@@ -1,11 +1,8 @@
 /**
  * Board.rs
  * - 盤面状態と手駒状態のセット
- * - 各種評価メソッドと、評価済み情報のSideごとのHashMapを保持する
+ * - 各種評価メソッドと、評価済み情報のSideごとのOptionの配列を保持する
  */
-
-use std::collections::HashMap;
-use std::cell::RefCell;
 
 use crate::data::types::{
 	Cell,
@@ -48,7 +45,7 @@ impl Iterator for Board{
 				return None;
 			}
 		}
-		return Some(self.data[self.iter_y][self.iter_x]);
+		return Some(self.cells[self.iter_y][self.iter_x]);
 	}
 	fn size_hint(&self) -> (usize, Option<usize>) {
 		return (12, Some(12));
@@ -63,10 +60,10 @@ impl ExactSizeIterator for Board{
 #[derive(Debug, Clone)]
 pub struct Board{
 	// 盤情報の二次元配列
-	pub data: [[Cell; 3]; 4],
+	pub cells: [[Cell; 3]; 4],
 
 	// 手駒: sideをキーにしたKomaの配列
-	pub tegomas: RefCell<HashMap<Side, Vec<Koma>>>,
+	pub tegomas: [Option<Vec<Koma>>; 2],
 
 	// イテレータの現在処理位置
 	// TODO: イテレータ実装は別structにしてBoard自体から省きたいかな。評価時にcloneする意味がない
@@ -74,20 +71,20 @@ pub struct Board{
 	iter_y: usize,
 
 	// sideの状態: 続行可能かゲームオーバー状態か
-	pub state_map: RefCell<HashMap<Side, SideState>>,
+	pub states: [Option<SideState>; 2],
 
 	// side側の「効いてる場所」の一覧
-	pub attackable_map: RefCell<HashMap<Side, FlagBoard>>,
+	pub attackable_maps: [Option<FlagBoard>; 2],
 
 	// sideがチェックメイトされているかどうか
-	pub is_checkmate_map: RefCell<HashMap<Side, bool>>,
+	pub is_checkmates: [Option<bool>; 2],
 
 	// sideのトライ可能手の一覧
 	// - is_tryableはトライ可能手が1つ以上ある状態を指すのでメソッドにした
-	pub tryable_positions_map: RefCell<HashMap<Side, Vec<Position>>>,
+	pub tryable_positions: [Option<Vec<Position>>; 2],
 
 	// sideの着手可能手の一覧
-	pub valid_hands_map: RefCell<HashMap<Side, Vec<Hand>>>,
+	pub valid_hands: [Option<Vec<Hand>>; 2],
 }
 
 #[allow(dead_code)]
@@ -95,25 +92,24 @@ impl Board{
 
 	pub fn new() -> Self {
 		let mut _board = Self{
-			data: INITIAL_BOARD_DATA,
-			tegomas: RefCell::new(HashMap::new()),
+			cells: INITIAL_BOARD_DATA,
+			tegomas: Default::default(),
 			iter_x: 0,
 			iter_y: 0,
-			state_map: RefCell::new(HashMap::new()),
-			attackable_map: RefCell::new(HashMap::new()),
-			is_checkmate_map: RefCell::new(HashMap::new()),
-			tryable_positions_map: RefCell::new(HashMap::new()),
-			valid_hands_map: RefCell::new(HashMap::new()),
+			states: Default::default(),
+			attackable_maps: Default::default(),
+			is_checkmates: Default::default(),
+			tryable_positions: Default::default(),
+			valid_hands: Default::default(),
 		};
 		_board.reset_states_to_playable();
 		return _board;
 	}
 
 	// side statesを両面Playableで初期化
-	fn reset_states_to_playable(&self) {
-		let mut map = self.state_map.borrow_mut();
-		map.insert(Side::A, SideState::Playable);
-		map.insert(Side::B, SideState::Playable);
+	fn reset_states_to_playable(&mut self) {
+		self.states[Side::A.to_index()] = Some(SideState::Playable);
+		self.states[Side::B.to_index()] = Some(SideState::Playable);
 	}
 
 	// 手を反映したクローンを作成
@@ -168,24 +164,15 @@ impl Board{
 
 	// 汎用サブルーチン: posでdataからcell取得
 	fn get_cell(&self, pos:&Position) -> Cell{
-		return self.data[pos.y as usize][pos.x as usize];
+		return self.cells[pos.y as usize][pos.x as usize];
 	}
 	// 汎用サブルーチン: posにcellをセット
 	fn set_cell(&mut self, pos:&Position, cell:Cell){
-		self.data[pos.y as usize][pos.x as usize] = cell;
+		self.cells[pos.y as usize][pos.x as usize] = cell;
 	}
 	// 汎用サブルーチン: posにsideのkomaをセット
 	fn set_side_koma(&mut self, side:Side, pos:&Position, koma:Koma){
-		self.data[pos.y as usize][pos.x as usize] = Cell{side, koma};
-	}
-
-	// 汎用サブルーチン: sideのstateを更新する
-	// - mapに対する記述が冗長なのでメソッド化
-	fn set_side_state(&self, side:&Side, state:&SideState){
-		let mut map = self.state_map.borrow_mut();
-		let entry = map.entry(*side);
-		// undone: or_insert不要というか、別の書き方がある気がしている。初期化してるし常時上書きでいいのだけど一旦これで。。
-		*entry.or_insert(*state) = *state;
+		self.cells[pos.y as usize][pos.x as usize] = Cell{side, koma};
 	}
 
 	// 汎用サブルーチン: ライオンの位置を取得
@@ -207,7 +194,7 @@ impl Board{
 	fn search_koma_pos(&self, side:&Side, koma:&Koma) -> Option<Position> {
 		for x in 0..3{
 			for y in 0..4{
-				let cell = self.data[y][x];
+				let cell = self.cells[y][x];
 				if cell.side == *side && cell.koma == *koma {
 					return Some(Position{x:x as i8,y:y as i8});
 				}
@@ -218,8 +205,7 @@ impl Board{
 
 	// 汎用サブルーチン: sideの手駒一覧を取得する
 	fn get_tegomas(&self, side:&Side) -> Vec<Koma> {
-		let tegomas = self.tegomas.borrow();
-		let komalist = tegomas.get(side);
+		let komalist = self.tegomas[side.to_index()].clone();
 		match komalist {
 			Some(x) => x.clone(),
 			None => {
@@ -231,10 +217,9 @@ impl Board{
 	// 汎用サブルーチン: sideの手駒indexのKomaを取得する
 	// - 該当の駒がなければpanic。利用元の指定がおかしい
 	fn get_tegoma(&self, side:&Side, index:i8) -> Koma {
-		let tegomas = self.tegomas.borrow();
-		let komalist = tegomas.get(side);
+		let komalist = self.tegomas[side.to_index()].clone();
 		match komalist {
-			Some(x) => x.clone()[index as usize],
+			Some(x) => x[index as usize],
 			None => {
 				panic!("tegomasが初期化されていませんでした。")
 			}
@@ -242,43 +227,34 @@ impl Board{
 	}
 
 	// 汎用サブルーチン: sideに手駒を追加する
-	fn add_tegoma(&self, side:&Side, koma:Koma) {
-		let mut map = self.tegomas.borrow_mut();
-		let tegomas_opt = map.get(&side);
-		match tegomas_opt {
-			Some(list) => {
-				// mutableなclone作成
-				let mut editor = list.clone();
-				// 手駒追加
-				editor.push(koma);
-				// undone: editorのclone作成……なんでこんなことになったのか要再検証。不要な気がする
-				let edited = editor.clone();
-				// entry取得
-				let entry = map.entry(*side);
-				// entryにor_insert経由で最新情報update（無駄な書き方をしている気がする）
-				*entry.or_insert(edited) = edited.clone();
+	fn add_tegoma(&mut self, side:&Side, koma:Koma) {
+		let index = side.to_index();
+
+		// TODO: cloneしちゃいかんよなこれ？
+		let mut komalist = self.tegomas[index].clone();
+		match komalist {
+			Some(mut list) => {
+				list.push(koma);
 			},
 			_ =>{
-				let new_list: Vec<Koma> = [koma].to_vec();
-				map.insert(*side, [].to_vec());
-				let entry = map.entry(*side);
-				*entry.or_insert(new_list) = new_list.clone();
+				komalist = Some([koma].to_vec());
 			}
 		}
 	}
 
 	// 汎用サブルーチン: sideからindexの手駒を削除する
-	fn remove_tegoma(&mut self, side:&Side, index:i8) {
-		let mut map = self.tegomas.borrow_mut();
-		// unwarpする
-		// - 手駒がない時に実行されたら利用側がおかしいので、unwrapできなければpanicで良い
-		let mut tegomas = map.get(&side).unwrap().clone();
-		// 削除
-		tegomas.remove(index as usize);
+	fn remove_tegoma(&self, side:&Side, index:i8) {
 
-		// 保存
-		let entry = map.entry(*side);
-		*entry.or_insert(tegomas) = tegomas.clone();
+		// TODO: cloneしちゃいかんよなこれ？
+		let mut komalist = self.tegomas[side.to_index()].clone();
+		match komalist {
+			Some(mut x) => {
+				x.remove(index as usize);
+			},
+			None => {
+				panic!("tegomasが初期化されていませんでした。");
+			}
+		}
 	}
 
 	// 汎用サブルーチン: Koma::NullなPositionの一覧を取得
@@ -286,7 +262,7 @@ impl Board{
 		let mut results: Vec<Position> = [].to_vec();
 		for x in 0..3{
 			for y in 0..4{
-				let cell = self.data[y][x];
+				let cell = self.cells[y][x];
 				if cell.koma == Koma::Null {
 					results.push(Position{x:x as i8,y:y as i8});
 				}
@@ -300,7 +276,7 @@ impl Board{
 		let mut results: Vec<Position> = [].to_vec();
 		for x in 0..3{
 			for y in 0..4{
-				let cell = self.data[y][x];
+				let cell = self.cells[y][x];
 				if cell.side == *side {
 					results.push(Position{x:x as i8,y:y as i8});
 				}
@@ -318,10 +294,10 @@ impl Board{
 	// 計算済みならキャッシュから返す
 	pub fn get_or_create_attackable_map(&self, side:&Side) -> FlagBoard{
 		// arrackable_mapsから取得できなければ生成、あれば取得してclone()をreturnする
-		// undone: clone()するのが気になるものの、まずは生成済なら再計算しない、と言うことが主眼なので一旦これで。。borrow checkerとの戦いに疲れ切っているorz
-		let mut map = self.attackable_map.borrow_mut();
-		let result = map.get(&side);
-		match result {
+
+		// TODO: cloneしちゃいかんよなこれ？
+		let mut opt = self.attackable_maps[side.to_index()].clone();
+		match opt {
 			Some(flag_board) => {
 				// println!("DEBUG: get_or_create_attackable_map() get cached.");
 				flag_board.clone()
@@ -329,7 +305,9 @@ impl Board{
 			_ => {
 				// println!("DEBUG: get_or_create_attackable_map() new created.");
 				let new_result = self.create_attackable_map(&side);
-				map.insert(*side, new_result.clone());
+
+				// TODO: 以下がborrow checker errorっぽい
+				// self.attackable_maps[side.to_index()] = Some(new_result);
 				return new_result;
 			}
 		}
@@ -341,7 +319,7 @@ impl Board{
 		let mut attackable_map = FlagBoard::new(false);
 		for x in 0..3{
 			for y in 0..4{
-				let cell = self.data[y][x];
+				let cell = self.cells[y][x];
 				// 自陣の駒以外のセルは評価しない
 				if cell.side != *side {
 					continue;
@@ -368,18 +346,19 @@ impl Board{
 	// - 計算済みならキャッシュから返す
 	pub fn get_or_create_is_checkmate(&self, side:&Side) -> bool {
 		// すでに計算済みかどうか確認
-		let mut map = self.is_checkmate_map.borrow_mut();
-		let result = map.get(&side);
+		let result = self.is_checkmates[side.to_index()];
 		match result {
 			Some(x) => {
 				// println!("DEBUG: get_or_create_is_checkmate() get cached.");
-				return *x
+				return x
 			},
 			_ => {
 				// キーが存在しないので新規作成
 				// println!("DEBUG: get_or_create_is_checkmate() new created.");
-				let new_result = self.create_is_checkmate(side);
-				map.insert(*side, new_result);
+				let new_result = self.create_is_checkmate(&side);
+
+				// TODO: 以下がborrow checker errorっぽい
+				// self.is_checkmates[side.to_index()] = Some(new_result);
 				return new_result;
 			}
 		}
@@ -403,8 +382,7 @@ impl Board{
 	// 評価処理: sideがトライ可能か確認
 	fn get_or_create_tryable_positions(&self, side:&Side) -> Vec<Position> {
 		// すでに計算済みかどうか確認
-		let mut map = self.tryable_positions_map.borrow_mut();
-		let result = map.get(&side);
+		let result = self.tryable_positions[side.to_index()].clone();
 		match result {
 			Some(x) => {
 				// println!("DEBUG: get_or_create_tryable_positions() get cached.");
@@ -413,8 +391,10 @@ impl Board{
 			_ => {
 				// キーが存在しないので新規作成
 				// println!("DEBUG: get_or_create_tryable_positions() new created.");
-				let new_result = self.create_tryable_positions(side);
-				map.insert(*side, new_result.clone());
+				let new_result = self.create_tryable_positions(&side);
+
+				// TODO: 以下がborrow checker errorっぽい
+				// self.tryable_positions[side.to_index()] = Some(new_result);
 				return new_result;
 			}
 		}
@@ -438,7 +418,7 @@ impl Board{
 			// トライ目標座標xがライオンの動ける範囲外かチェック
 			if lion_pos.x - 1 > x || lion_pos.x + 1 < x { continue; }
 
-			let target_cell = self.data[try_y as usize][x as usize];
+			let target_cell = self.cells[try_y as usize][x as usize];
 
 			// 自分の駒がある場所には移動できない
 			if target_cell.side == *side { continue; }
@@ -451,10 +431,9 @@ impl Board{
 
 	// 評価処理: sideの着手可能手の一覧を取得する
 	// - 計算済みならキャッシュから返す
-	pub fn get_or_create_valid_hands(&self, side:&Side) -> Vec<Hand> {
+	pub fn get_or_create_valid_hands(&mut self, side:&Side) -> Vec<Hand> {
 		// すでに計算済みかどうか確認
-		let mut map = self.valid_hands_map.borrow_mut();
-		let result = map.get(&side);
+		let result = self.valid_hands[side.to_index()].clone();
 		match result {
 			Some(x) => {
 				// println!("DEBUG: get_or_create_valid_hands() get cached.");
@@ -463,15 +442,15 @@ impl Board{
 			_ => {
 				// キーが存在しないので新規作成
 				// println!("DEBUG: get_or_create_valid_hands() new created.");
-				let new_result = self.create_valid_hands(side);
-				map.insert(*side, new_result.clone());
+				let new_result = self.create_valid_hands(&side);
+				// self.valid_hands[side.to_index()] = Some(new_result);
 				return new_result;
 			}
 		}
 	}
 
 	// 評価処理: sideの着手可能手の一覧を取得する
-	fn create_valid_hands(&self, side:&Side) -> Vec<Hand> {
+	fn create_valid_hands(&mut self, side:&Side) -> Vec<Hand> {
 		let mut hands: Vec<Hand> = [].to_vec();
 
 		// チェックメイト時
@@ -493,7 +472,7 @@ impl Board{
 		// ※どうぶつしょうぎ(TM)のルールにおいてはチェスの意味でのステイルメイトは存在しない
 		// - 今回の実装ではトライ回避手を先に枝刈りしたので、「トライ失敗する手しか残っていない」場合に発生し得る想定
 		if hands.len() == 0{
-			self.set_side_state(side, &SideState::GameOverWithStalemate);
+			self.states[side.to_index()] = Some(SideState::GameOverWithStalemate);
 		}
 
 		// hands.append(&mut self.create_all_move_hands(side));
@@ -506,7 +485,7 @@ impl Board{
 
 		// 移動可能な駒のmove一覧を取得する
 		for pos in self.get_all_onboard_koma_positions(side) {
-			let cell = self.data[pos.y as usize][pos.x as usize];
+			let cell = self.cells[pos.y as usize][pos.x as usize];
 			// TODO: この走査はcreate_attackable_mapでも出てきたのでイテレータで共通化したい。書き方調べる
 			let rules = cell.koma.get_move_rule_from_side_a();
 			for rule in rules {
@@ -514,7 +493,7 @@ impl Board{
 				if !target_pos.is_valid() { continue; }
 
 				// 移動先セル取得
-				let target_cell = self.data[target_pos.y as usize][target_pos.x as usize];
+				let target_cell = self.cells[target_pos.y as usize][target_pos.x as usize];
 
 				// 自陣サイドの駒が存在するセルには移動できない
 				if target_cell.side == *side { continue; }
@@ -566,7 +545,7 @@ impl Board{
 	}
 
 	// 評価処理: サブルーチン: チェックメイト時の着手可能手の一覧を取得する
-	fn create_valid_hands_when_checkmated(&self, side:&Side) -> Vec<Hand> {
+	fn create_valid_hands_when_checkmated(&mut self, side:&Side) -> Vec<Hand> {
 
 		let mut hands: Vec<Hand> = [].to_vec();
 
@@ -580,7 +559,7 @@ impl Board{
 				Some(move_hand) => {
 					// ライオン移動手
 					if move_hand.from == lion_pos{
-						let target_cell = self.data[move_hand.to.y as usize][move_hand.to.x as usize];
+						let target_cell = self.cells[move_hand.to.y as usize][move_hand.to.x as usize];
 						// 自陣サイドの駒が存在するセルには移動できない
 						if target_cell.side == *side { continue; }
 
@@ -594,7 +573,7 @@ impl Board{
 						// - チェックメイト時に手駒配置はできないので除外
 						// - ライオン以外の手からは、「相手の駒を取る手」のみがチェクメイト回避手の可能性がある
 
-						let target_cell = self.data[move_hand.to.y as usize][move_hand.to.x as usize];
+						let target_cell = self.cells[move_hand.to.y as usize][move_hand.to.x as usize];
 						// 相手の駒じゃないのでスキップ
 						if target_cell.side != side.reverse() { continue; }
 
@@ -612,21 +591,21 @@ impl Board{
 
 		// handがない = チェックメイト回避不能 → ゲームオーバー
 		if hands.len() == 0{
-			self.set_side_state(side, &SideState::GameOverWithCheckmate);
+			self.states[side.to_index()] = Some(SideState::GameOverWithCheckmate);
 		}
 
 		return hands;
 	}
 
 	// 評価処理: サブルーチン: トライアブル時の着手可能手の一覧を取得する
-	fn create_valid_hands_when_tryable(&self, side:&Side) -> Vec<Hand> {
+	fn create_valid_hands_when_tryable(&mut self, side:&Side) -> Vec<Hand> {
 
 		let mut hands: Vec<Hand> = [].to_vec();
 
 		let enemy_tryable_positions = self.get_or_create_tryable_positions(&side.reverse());
 		if enemy_tryable_positions.len() > 1 {
 			// トライ回避不能
-			self.set_side_state(side, &SideState::GameOverWithTryable);
+			self.states[side.to_index()] = Some(SideState::GameOverWithTryable);
 			return hands;
 		}
 		if enemy_tryable_positions.len() == 1 {

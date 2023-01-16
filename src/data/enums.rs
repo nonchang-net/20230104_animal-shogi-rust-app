@@ -24,6 +24,14 @@ impl Side {
 			_ => Side::Free
 		}
 	}
+	// 配列インデックスを返す
+	pub fn to_index(&self) -> usize{
+		match self {
+			Side::A => 0,
+			Side::B => 1,
+			_ => panic!("Side::Freeは配列インデックスにできません。")
+		}
+	}
 }
 
 // #[allow(unused_variables)]

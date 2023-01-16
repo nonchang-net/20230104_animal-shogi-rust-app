@@ -24,7 +24,7 @@ impl Board {
 		result.push('\n');
 
 		// セル表示開始
-		for (index, line) in self.data.iter().enumerate() {
+		for (index, line) in self.cells.iter().enumerate() {
 			result.push_str(format!(" {}:", index+1).as_str());
 			for cell in line.iter() {
 				result.push_str(cell.render().as_str())
@@ -46,8 +46,7 @@ impl Board {
 	// 持ち駒列を出力
 	pub fn render_motigoma(&self, side:&Side) -> String {
 		let mut result = String::new();
-		let tegomas = self.tegomas.borrow();
-		let komalist = tegomas.get(side);
+		let komalist = self.tegomas[side.to_index()].clone();
 		match komalist {
 			Some(x) => for koma in x {
 				result.push(koma.render())
