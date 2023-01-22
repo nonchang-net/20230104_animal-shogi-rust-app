@@ -66,7 +66,7 @@ pub struct Board{
 	pub tegomas: [Option<Vec<Koma>>; 2],
 
 	// イテレータの現在処理位置
-	// TODO: イテレータ実装は別structにしてBoard自体から省きたいかな。評価時にcloneする意味がない
+	// TODO: イテレータ実装をトレイトあたりで分けてBoard自体から省きたいかな。評価時にcloneする意味がない
 	iter_x: usize,
 	iter_y: usize,
 
@@ -96,21 +96,16 @@ impl Board{
 			tegomas: Default::default(),
 			iter_x: 0,
 			iter_y: 0,
-			states: Default::default(),
+			states: [
+				Some(SideState::Playable),
+				Some(SideState::Playable)
+			],
 			attackable_maps: Default::default(),
 			is_checkmates: Default::default(),
 			tryable_positions: Default::default(),
 			valid_hands: Default::default(),
 		};
-		_board.reset_states_to_playable();
 		return _board;
-	}
-
-
-	// side statesを両面Playableで初期化
-	fn reset_states_to_playable(&mut self) {
-		self.states[Side::A.to_index()] = Some(SideState::Playable);
-		self.states[Side::B.to_index()] = Some(SideState::Playable);
 	}
 
 	// 手を反映したクローンを作成
@@ -215,13 +210,15 @@ impl Board{
 			],
 			iter_x: 0,
 			iter_y: 0,
-			states: Default::default(),
+			states: [
+				Some(SideState::Playable),
+				Some(SideState::Playable)
+			],
 			attackable_maps: Default::default(),
 			is_checkmates: Default::default(),
 			tryable_positions: Default::default(),
 			valid_hands: Default::default(),
 		};
-		_new_board.reset_states_to_playable();
 		return _new_board;
 		
 	}

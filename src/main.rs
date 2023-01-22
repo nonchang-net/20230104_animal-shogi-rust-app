@@ -141,10 +141,7 @@ impl Game{
 		let index = self.rng.gen_range(0, hands.len());
 
 		// ランダムに打つ
-		// self.board = self.board.get_hand_applied_clone(&self.current_side, &hands[index]);
-		// TEST: 実行時panicが出ているので、試しにboard.clone()してからさらにapplied_clone()を取得してみる……。
-		// → 何度か試したらやはり同じところでエラー。
-		self.board = self.board.clone().get_hand_applied_clone(&self.current_side, &hands[index]);
+		self.board = self.board.get_hand_applied_clone(&self.current_side, &hands[index]);
 
 		// 次のターンに変更する
 		self.current_turn += 1;

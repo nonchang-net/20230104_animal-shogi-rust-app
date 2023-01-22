@@ -62,8 +62,9 @@ impl Board {
 		let is_checkmate = self.get_or_create_is_checkmate(side);
 		let checkmate_str = String::from("is checkmate.");
 		result.push_str(format!(
-			"Side.{}'s turn. {}\n",
+			"Side.{}'s turn. hands:{} {}\n",
 			side.render(),
+			self.get_or_create_valid_hands(side).len(),
 			if is_checkmate {
 				checkmate_str
 			} else {
