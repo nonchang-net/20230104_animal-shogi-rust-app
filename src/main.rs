@@ -107,11 +107,28 @@ impl Game{
 							self.next();
 						},
 						_ => {
-							println!("GAME OVER!!!!!!");
+							self.print_gameover_message(&x);
 							break;
 						}
 					}
 				}
+			}
+		}
+	}
+
+	fn print_gameover_message(&self, side_state: &SideState) {
+		match side_state {
+			SideState::GameOverWithCheckmate => {
+				println!("GAME OVER: チェックメイト回避手がありませんでした。");
+			},
+			SideState::GameOverWithTryable => {
+				println!("GAME OVER: 相手のトライを回避できない状態でした。");
+			},
+			SideState::GameOverWithStalemate => {
+				println!("GAME OVER: ステイルメイトです。多分: 失敗するトライ手しかない状態？");
+			},
+			_ => {
+				panic!("想定外動作: playableなのにprint_gameoverに来た？")
 			}
 		}
 	}

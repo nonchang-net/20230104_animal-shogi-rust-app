@@ -207,7 +207,7 @@ impl Board{
 		}
 
 		// 新しいBoardを作って返す
-		let mut _newBoard = Self {
+		let mut _new_board = Self {
 			cells: new_cells,
 			tegomas: [
 				Some(tegoma_side_a),
@@ -221,8 +221,8 @@ impl Board{
 			tryable_positions: Default::default(),
 			valid_hands: Default::default(),
 		};
-		_newBoard.reset_states_to_playable();
-		return _newBoard;
+		_new_board.reset_states_to_playable();
+		return _new_board;
 		
 	}
 
@@ -343,11 +343,10 @@ impl Board{
 
 	// 評価処理: 効いている場所の一覧を取得する
 	// 計算済みならキャッシュから返す
-	pub fn get_or_create_attackable_map(&self, side:&Side) -> FlagBoard{
+	pub fn get_or_create_attackable_map(&mut self, side:&Side) -> FlagBoard{
 		// arrackable_mapsから取得できなければ生成、あれば取得してclone()をreturnする
 
-		// TODO: cloneしちゃいかんよなこれ？
-		let mut opt = self.attackable_maps[side.to_index()].clone();
+		let opt = &self.attackable_maps[side.to_index()];
 		match opt {
 			Some(flag_board) => {
 				// println!("DEBUG: get_or_create_attackable_map() get cached.");
@@ -358,7 +357,7 @@ impl Board{
 				let new_result = self.create_attackable_map(&side);
 
 				// TODO: 以下がborrow checker errorっぽい
-				// self.attackable_maps[side.to_index()] = Some(new_result);
+				self.attackable_maps[side.to_index()] = Some(new_result.clone());
 				return new_result;
 			}
 		}
@@ -395,7 +394,7 @@ impl Board{
 
 	// 評価処理: sideがチェックメイトされているか確認
 	// - 計算済みならキャッシュから返す
-	pub fn get_or_create_is_checkmate(&self, side:&Side) -> bool {
+	pub fn get_or_create_is_checkmate(&mut self, side:&Side) -> bool {
 		// すでに計算済みかどうか確認
 		let result = self.is_checkmates[side.to_index()];
 		match result {
@@ -409,18 +408,18 @@ impl Board{
 				let new_result = self.create_is_checkmate(&side);
 
 				// TODO: 以下がborrow checker errorっぽい
-				// self.is_checkmates[side.to_index()] = Some(new_result);
+				self.is_checkmates[side.to_index()] = Some(new_result);
 				return new_result;
 			}
 		}
 	}
 
 	// 評価処理: sideがチェックメイトされているか確認
-	fn create_is_checkmate(&self, side:&Side) -> bool {
+	fn create_is_checkmate(&mut self, side:&Side) -> bool {
 		let lion_pos = self.search_lion_pos(side);
 		// 相手側のattackable_mapを取得
-		let flag_board = self.get_or_create_attackable_map(&side.reverse());
-		return flag_board.data[lion_pos.y as usize][lion_pos.x as usize];
+		let flag_board_data = self.get_or_create_attackable_map(&side.reverse()).data;
+		return flag_board_data[lion_pos.y as usize][lion_pos.x as usize];
 	}
 
 	// 評価処理: sideがトライアブルかどうか
@@ -530,7 +529,7 @@ impl Board{
 	}
 
 	// 評価処理: サブルーチン: 通常の（チェックメイトされてない・トライアブルじゃない時の）場合の、盤上の移動系の着手可能手の一覧を取得する
-	fn create_all_move_hands(&self, side:&Side) -> Vec<Hand> {
+	fn create_all_move_hands(&mut self, side:&Side) -> Vec<Hand> {
 		let mut hands: Vec<Hand> = [].to_vec(); 
 
 		// 移動可能な駒のmove一覧を取得する
@@ -628,7 +627,7 @@ impl Board{
 						if target_cell.side != side.reverse() { continue; }
 
 						// 手を打ってみる
-						let cloned = self.get_hand_applied_clone(side, &check_hand);
+						let mut cloned = self.get_hand_applied_clone(side, &check_hand);
 						// 自分が王手じゃなくなっていたら着手可能手
 						if !cloned.get_or_create_is_checkmate(&side) {
 							hands.push(check_hand);
