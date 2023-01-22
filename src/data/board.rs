@@ -106,6 +106,7 @@ impl Board{
 		return _board;
 	}
 
+
 	// side statesを両面Playableで初期化
 	fn reset_states_to_playable(&mut self) {
 		self.states[Side::A.to_index()] = Some(SideState::Playable);
@@ -116,14 +117,27 @@ impl Board{
 	// - 先読みに必要になる
 	// - トライアブル回避手の一覧
 	pub fn get_hand_applied_clone(&self, side:&Side, hand:&Hand) -> Board {
-		let mut cloned: Board = self.clone();
-		// sideの一手を適用する
-		cloned.apply(side, hand);
-		return cloned;
-	}
 
-	// boardに手を適用する
-	fn apply(&mut self, side:&Side, hand:&Hand) {
+		let mut exist_move_hand = false;
+
+		let mut new_cells: [[Cell; 3]; 4] = self.cells.clone();
+
+		// 現在の手駒状態をcloneしておく
+		let mut tegoma_side_a: Vec<Koma> = Default::default();
+		match self.tegomas[0].clone() {
+			Some(x) => {
+				tegoma_side_a = x;
+			},
+			_=>{}
+		}
+		let mut tegoma_side_b: Vec<Koma> = Default::default();
+		match self.tegomas[1].clone() {
+			Some(x) => {
+				tegoma_side_b = x;
+			},
+			_=>{}
+		}
+
 		match hand.move_hand{
 			Some(move_hand) => {
 				let from = &move_hand.from;
@@ -131,16 +145,37 @@ impl Board{
 				let to = &move_hand.to;
 				let to_cell = self.get_cell(to);
 
-				if to_cell.side != Side::Free {
-					// 手駒に追加
-					self.get_tegomas(side).push(to_cell.koma);
+				// debug
+				if to_cell.side == *side {
+					panic!("想定外呼び出し: 自分の駒がある場所にmoveしようとしました。。");
 				}
 
+				// 相手のコマを取ったかどうか
+				if to_cell.side != Side::Free {
+					// 手駒に追加
+					match to_cell.side {
+						Side::A => {
+							tegoma_side_b.push(to_cell.koma);
+						},
+						Side::B => {
+							tegoma_side_a.push(to_cell.koma);
+						},
+						_ => {
+							panic!("ここには来ないはず")
+						}
+					}
+					
+				}
+
+				// TODO: ひよこ→にわとりのプロモーション評価を忘れている。move_handにフラグ追加が必要？ AI専用コードなので常時プロモーションでいいかな？
+
 				// 移動先を移動元の駒に置き換える
-				self.set_cell(to, from_cell);
+				new_cells[to.y as usize][to.x as usize] = from_cell;
 
 				// 移動元を空白に置き換える
-				self.set_cell(from, Cell{side:Side::Free, koma:Koma::Null});
+				new_cells[from.y as usize][from.x as usize] = Cell{side:Side::Free, koma:Koma::Null};
+
+				exist_move_hand = true;
 			},
 			None => {}
 		}
@@ -148,16 +183,49 @@ impl Board{
 			Some(put_hand) => {
 				// boardに配置する
 				let koma = self.get_tegoma(side, put_hand.index);
-				self.set_side_koma(*side, &put_hand.to, koma);
+
+				new_cells[put_hand.to.y as usize][put_hand.to.x as usize] = Cell{koma:koma, side: *side};
 
 				// 手駒から削除
-				self.remove_tegoma(side, put_hand.index)
-
+				match side {
+					Side::A => {
+						tegoma_side_b.remove(put_hand.index as usize);
+					},
+					Side::B => {
+						tegoma_side_a.remove(put_hand.index as usize);
+					},
+					_ => {
+						panic!("ここには来ないはず")
+					}
+				}
 			},
-			None => {}
+			None => {
+				if !exist_move_hand {
+					panic!("想定外コード: handがput/move両方ともNoneでした")
+				}
+			}
 		}
+
+		// 新しいBoardを作って返す
+		let mut _newBoard = Self {
+			cells: new_cells,
+			tegomas: [
+				Some(tegoma_side_a),
+				Some(tegoma_side_b)
+			],
+			iter_x: 0,
+			iter_y: 0,
+			states: Default::default(),
+			attackable_maps: Default::default(),
+			is_checkmates: Default::default(),
+			tryable_positions: Default::default(),
+			valid_hands: Default::default(),
+		};
+		_newBoard.reset_states_to_playable();
+		return _newBoard;
+		
 	}
-	
+
 	// ====================
 	// 汎用系サブルーチン
 	// ====================
@@ -165,14 +233,6 @@ impl Board{
 	// 汎用サブルーチン: posでdataからcell取得
 	fn get_cell(&self, pos:&Position) -> Cell{
 		return self.cells[pos.y as usize][pos.x as usize];
-	}
-	// 汎用サブルーチン: posにcellをセット
-	fn set_cell(&mut self, pos:&Position, cell:Cell){
-		self.cells[pos.y as usize][pos.x as usize] = cell;
-	}
-	// 汎用サブルーチン: posにsideのkomaをセット
-	fn set_side_koma(&mut self, side:Side, pos:&Position, koma:Koma){
-		self.cells[pos.y as usize][pos.x as usize] = Cell{side, koma};
 	}
 
 	// 汎用サブルーチン: ライオンの位置を取得
@@ -226,35 +286,18 @@ impl Board{
 		}
 	}
 
-	// 汎用サブルーチン: sideに手駒を追加する
-	fn add_tegoma(&mut self, side:&Side, koma:Koma) {
-		let index = side.to_index();
-
-		// TODO: cloneしちゃいかんよなこれ？
-		let mut komalist = self.tegomas[index].clone();
-		match komalist {
-			Some(mut list) => {
-				list.push(koma);
-			},
-			_ =>{
-				komalist = Some([koma].to_vec());
-			}
-		}
-	}
-
 	// 汎用サブルーチン: sideからindexの手駒を削除する
-	fn remove_tegoma(&self, side:&Side, index:i8) {
-
-		// TODO: cloneしちゃいかんよなこれ？
+	fn get_tegoma_removed_clone(&self, side:&Side, index:i8) -> Option<Vec<Koma>>{
 		let mut komalist = self.tegomas[side.to_index()].clone();
 		match komalist {
-			Some(mut x) => {
+			Some(ref mut x) => {
 				x.remove(index as usize);
 			},
 			None => {
-				panic!("tegomasが初期化されていませんでした。");
+				panic!("想定外動作: 初期化されていないtegomaからremove()しようとしました。。");
 			}
 		}
+		return komalist;
 	}
 
 	// 汎用サブルーチン: Koma::NullなPositionの一覧を取得
@@ -289,6 +332,14 @@ impl Board{
 	// ====================
 	// 評価処理
 	// ====================
+
+	// 評価処理: ゲームオーバー状態かどうかが判定済み状態にする
+	// - 評価中にフラグ変更しているのがあまりよくないかもしれない
+	// - 両方の陣営の「get_or_create_valid_hands()」を評価すれば、`self.state()`を評価しているところは全て通る
+	pub fn evaluate_gamestate(&mut self) {
+		self.get_or_create_valid_hands(&Side::A);
+		self.get_or_create_valid_hands(&Side::B);
+	}
 
 	// 評価処理: 効いている場所の一覧を取得する
 	// 計算済みならキャッシュから返す
@@ -475,7 +526,6 @@ impl Board{
 			self.states[side.to_index()] = Some(SideState::GameOverWithStalemate);
 		}
 
-		// hands.append(&mut self.create_all_move_hands(side));
 		return hands;
 	}
 

@@ -1,3 +1,4 @@
+use data::enums::SideState;
 use rand::prelude::*;
 
 mod data;
@@ -90,9 +91,28 @@ impl Game{
 			// 入力
 			let answer = Self::get_input();
 			if answer == "q" { break; }
-	
-			// 次ターン評価
-			self.next();
+
+			// ゲームオーバー評価
+			// - evaluate_gamestate()して負けてたらゲームオーバーにする
+			self.board.evaluate_gamestate();
+			let side_idx = if self.current_side == Side::A { 0 } else { 1 };
+			match self.board.states[side_idx] {
+				None => {
+					panic!("stateが初期化されていません。")
+				},
+				Some(x) => {
+					match x {
+						SideState::Playable =>{
+							// 次ターン評価
+							self.next();
+						},
+						_ => {
+							println!("GAME OVER!!!!!!");
+							break;
+						}
+					}
+				}
+			}
 		}
 	}
 
