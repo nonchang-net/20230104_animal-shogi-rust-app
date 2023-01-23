@@ -97,20 +97,13 @@ impl Game{
 			self.board.evaluate_gamestate();
 			let side_idx = if self.current_side == Side::A { 0 } else { 1 };
 			match self.board.states[side_idx] {
-				None => {
-					panic!("stateが初期化されていません。")
+				SideState::Playable =>{
+					// 次ターン評価
+					self.next();
 				},
-				Some(x) => {
-					match x {
-						SideState::Playable =>{
-							// 次ターン評価
-							self.next();
-						},
-						_ => {
-							self.print_gameover_message(&x);
-							break;
-						}
-					}
+				_ => {
+					self.print_gameover_message(&self.board.states[side_idx]);
+					break;
 				}
 			}
 		}

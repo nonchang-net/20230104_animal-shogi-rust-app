@@ -73,7 +73,7 @@ pub struct Board{
 	iter_y: usize,
 
 	// sideの状態: 続行可能かゲームオーバー状態か
-	pub states: [Option<SideState>; 2],
+	pub states: [SideState; 2],
 
 	// side側の「効いてる場所」の一覧
 	pub attackable_maps: [Option<FlagBoard>; 2],
@@ -99,8 +99,8 @@ impl Board{
 			iter_x: 0,
 			iter_y: 0,
 			states: [
-				Some(SideState::Playable),
-				Some(SideState::Playable)
+				SideState::Playable,
+				SideState::Playable
 			],
 			attackable_maps: Default::default(),
 			is_checkmates: Default::default(),
@@ -201,8 +201,8 @@ impl Board{
 			iter_x: 0,
 			iter_y: 0,
 			states: [
-				Some(SideState::Playable),
-				Some(SideState::Playable)
+				SideState::Playable,
+				SideState::Playable
 			],
 			attackable_maps: Default::default(),
 			is_checkmates: Default::default(),
@@ -472,7 +472,7 @@ impl Board{
 		// ※どうぶつしょうぎ(TM)のルールにおいてはチェスの意味でのステイルメイトは存在しない
 		// - 今回の実装ではトライ回避手を先に枝刈りしたので、「トライ失敗する手しか残っていない」場合に発生し得る想定
 		if hands.len() == 0{
-			self.states[side.to_index()] = Some(SideState::GameOverWithStalemate);
+			self.states[side.to_index()] = SideState::GameOverWithStalemate;
 		}
 
 		return hands;
@@ -590,7 +590,7 @@ impl Board{
 
 		// handがない = チェックメイト回避不能 → ゲームオーバー
 		if hands.len() == 0{
-			self.states[side.to_index()] = Some(SideState::GameOverWithCheckmate);
+			self.states[side.to_index()] = SideState::GameOverWithCheckmate;
 		}
 
 		return hands;
@@ -604,7 +604,7 @@ impl Board{
 		let enemy_tryable_positions = self.get_or_create_tryable_positions(&side.reverse());
 		if enemy_tryable_positions.len() > 1 {
 			// トライ回避不能
-			self.states[side.to_index()] = Some(SideState::GameOverWithTryable);
+			self.states[side.to_index()] = SideState::GameOverWithTryable;
 			return hands;
 		}
 		if enemy_tryable_positions.len() == 1 {
@@ -649,8 +649,8 @@ mod board_tests {
 		let side_b_index = Side::B.to_index();
 		
 		// test: new直後のstateはPlayableである
-		assert_eq!(board.states[side_a_index].unwrap(), SideState::Playable);
-		assert_eq!(board.states[side_b_index].unwrap(), SideState::Playable);
+		assert_eq!(board.states[side_a_index], SideState::Playable);
+		assert_eq!(board.states[side_b_index], SideState::Playable);
 
 		// test: new直後の持ち駒はlen() == 0
 		assert_eq!(board.tegomas[side_a_index].len(), 0);
