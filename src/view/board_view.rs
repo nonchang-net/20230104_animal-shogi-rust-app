@@ -47,11 +47,8 @@ impl Board {
 	pub fn render_motigoma(&self, side:&Side) -> String {
 		let mut result = String::new();
 		let komalist = self.tegomas[side.to_index()].clone();
-		match komalist {
-			Some(x) => for koma in x {
-				result.push(koma.render())
-			},
-			None => result.push_str("none")
+		for koma in komalist {
+			result.push(koma.render());
 		}
 		return result;
 	}

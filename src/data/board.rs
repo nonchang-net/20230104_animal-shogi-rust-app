@@ -65,7 +65,7 @@ pub struct Board{
 	pub cells: [[Cell; 3]; 4],
 
 	// 手駒: sideをキーにしたKomaの配列
-	pub tegomas: [Option<Vec<Koma>>; 2],
+	pub tegomas: [Vec<Koma>; 2],
 
 	// イテレータの現在処理位置
 	// TODO: イテレータ実装をトレイトあたりで分けてBoard自体から省きたいかな。評価時にcloneする意味がない
@@ -120,20 +120,8 @@ impl Board{
 		let mut new_cells: [[Cell; 3]; 4] = self.cells.clone();
 
 		// 現在の手駒状態をcloneしておく
-		let mut tegoma_side_a: Vec<Koma> = Default::default();
-		match self.tegomas[0].clone() {
-			Some(x) => {
-				tegoma_side_a = x;
-			},
-			_=>{}
-		}
-		let mut tegoma_side_b: Vec<Koma> = Default::default();
-		match self.tegomas[1].clone() {
-			Some(x) => {
-				tegoma_side_b = x;
-			},
-			_=>{}
-		}
+		let mut tegoma_side_a: Vec<Koma> = self.tegomas[0].clone();
+		let mut tegoma_side_b: Vec<Koma> = self.tegomas[1].clone();
 
 		match hand.move_hand{
 			Some(move_hand) => {
@@ -179,7 +167,7 @@ impl Board{
 		match hand.put_hand{
 			Some(put_hand) => {
 				// boardに配置する
-				let koma = self.get_tegoma(side, put_hand.index);
+				let koma = self.tegomas[side.to_index()][put_hand.index as usize];
 
 				new_cells[put_hand.to.y as usize][put_hand.to.x as usize] = Cell{koma:koma, side: *side};
 
@@ -207,8 +195,8 @@ impl Board{
 		let mut _new_board = Self {
 			cells: new_cells,
 			tegomas: [
-				Some(tegoma_side_a),
-				Some(tegoma_side_b)
+				tegoma_side_a,
+				tegoma_side_b
 			],
 			iter_x: 0,
 			iter_y: 0,
@@ -260,43 +248,6 @@ impl Board{
 			}
 		}
 		None
-	}
-
-	// 汎用サブルーチン: sideの手駒一覧を取得する
-	fn get_tegomas(&self, side:&Side) -> Vec<Koma> {
-		let komalist = self.tegomas[side.to_index()].clone();
-		match komalist {
-			Some(x) => x.clone(),
-			None => {
-				return [].to_vec();
-			}
-		}
-	}
-
-	// 汎用サブルーチン: sideの手駒indexのKomaを取得する
-	// - 該当の駒がなければpanic。利用元の指定がおかしい
-	fn get_tegoma(&self, side:&Side, index:i8) -> Koma {
-		let komalist = self.tegomas[side.to_index()].clone();
-		match komalist {
-			Some(x) => x[index as usize],
-			None => {
-				panic!("tegomasが初期化されていませんでした。")
-			}
-		}
-	}
-
-	// 汎用サブルーチン: sideからindexの手駒を削除する
-	fn get_tegoma_removed_clone(&self, side:&Side, index:i8) -> Option<Vec<Koma>>{
-		let mut komalist = self.tegomas[side.to_index()].clone();
-		match komalist {
-			Some(ref mut x) => {
-				x.remove(index as usize);
-			},
-			None => {
-				panic!("想定外動作: 初期化されていないtegomaからremove()しようとしました。。");
-			}
-		}
-		return komalist;
 	}
 
 	// 汎用サブルーチン: Koma::NullなPositionの一覧を取得
@@ -575,7 +526,7 @@ impl Board{
 
 		// 手駒確認
 		// - 手駒があれば、全ての空白セルにputできる
-		let tegomas = self.get_tegomas(side);
+		let tegomas = self.tegomas[side.to_index()].clone();
 		for (index, _) in tegomas.iter().enumerate() {
 			for pos in self.get_null_cell_positions() {
 				let put_hand = Put{
@@ -701,9 +652,9 @@ mod board_tests {
 		assert_eq!(board.states[side_a_index].unwrap(), SideState::Playable);
 		assert_eq!(board.states[side_b_index].unwrap(), SideState::Playable);
 
-		// test: new直後の持ち駒は初期化されていない
-		assert_eq!(board.tegomas[side_a_index], None);
-		assert_eq!(board.tegomas[side_b_index], None);
+		// test: new直後の持ち駒はlen() == 0
+		assert_eq!(board.tegomas[side_a_index].len(), 0);
+		assert_eq!(board.tegomas[side_b_index].len(), 0);
 	}
 
 	#[test]
@@ -725,17 +676,15 @@ mod board_tests {
 		};
 
 		// 手を反映したboardを取得する
-		let mut new_board = board.get_hand_applied_clone(
+		let new_board = board.get_hand_applied_clone(
 			&Side::A, &hand
 		);
 
 		// test: Side::Aは手駒にひよこがある
-		assert_eq!(new_board.tegomas[side_a_index].clone().unwrap()[0], Koma::Hiyoko);
+		assert_eq!(new_board.tegomas[side_a_index][0], Koma::Hiyoko);
 
 		// test: Side::Bは手駒を何も持っていない
-		// note: hand_applied_cloneは都合上Vec<Koma>で初期化しているのでOption不要
-		// - → TODO: もうOption<Vec<Koma>>にする意味ないかも？？
-		assert_eq!(new_board.tegomas[side_b_index].clone().unwrap().len(), 0);
+		assert_eq!(new_board.tegomas[side_b_index].len(), 0);
 
 		// test: Side::Bは王手されている
 		// TODO: このテスト失敗する。なんだろう。falseになってるご様子。TODO。
