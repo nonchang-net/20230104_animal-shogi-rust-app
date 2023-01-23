@@ -4,7 +4,7 @@ use crate::data::enums::{
 	Side
 };
 use crate::data::types::{
-	Cell,
+	Cell
 };
 // use crate::data::board::{
 // 	Board,

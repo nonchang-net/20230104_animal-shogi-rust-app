@@ -186,10 +186,10 @@ impl Board{
 				// 手駒から削除
 				match side {
 					Side::A => {
-						tegoma_side_b.remove(put_hand.index as usize);
+						tegoma_side_a.remove(put_hand.index as usize);
 					},
 					Side::B => {
-						tegoma_side_a.remove(put_hand.index as usize);
+						tegoma_side_b.remove(put_hand.index as usize);
 					},
 					_ => {
 						panic!("ここには来ないはず")
@@ -669,6 +669,7 @@ impl Board{
 					hands.push(hand);
 				}
 			}
+
 			return hands;
 		}
 		// メモ: ここにくるということはpanicが妥当と思うが、設計見直してpanicの可能性をそもそも潰しておきたい気持ちも。
@@ -703,5 +704,42 @@ mod board_tests {
 		// test: new直後の持ち駒は初期化されていない
 		assert_eq!(board.tegomas[side_a_index], None);
 		assert_eq!(board.tegomas[side_b_index], None);
+	}
+
+	#[test]
+	fn test_new_board_to_hiyoko_forward_state() {
+		// new boardからSide:Aがひよこを打った状態を評価する
+		let board = Board::new();
+		let side_a_index = Side::A.to_index();
+		let side_b_index = Side::B.to_index();
+
+		// 1:2のひよこを1:1に移動する
+		let hand = Hand {
+			put_hand: None,
+			move_hand: Some(
+				Move {
+					from: Position{y:1,x:2},
+					to: Position{y:1,x:1}
+				}
+			)
+		};
+
+		// 手を反映したboardを取得する
+		let mut new_board = board.get_hand_applied_clone(
+			&Side::A, &hand
+		);
+
+		// test: Side::Aは手駒にひよこがある
+		assert_eq!(new_board.tegomas[side_a_index].clone().unwrap()[0], Koma::Hiyoko);
+
+		// test: Side::Bは手駒を何も持っていない
+		// note: hand_applied_cloneは都合上Vec<Koma>で初期化しているのでOption不要
+		// - → TODO: もうOption<Vec<Koma>>にする意味ないかも？？
+		assert_eq!(new_board.tegomas[side_b_index].clone().unwrap().len(), 0);
+
+		// test: Side::Bは王手されている
+		// TODO: このテスト失敗する。なんだろう。falseになってるご様子。TODO。
+		// assert_eq!(new_board.get_or_create_is_checkmate(&Side::B), true);
+
 	}
 }

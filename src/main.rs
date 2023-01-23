@@ -140,6 +140,9 @@ impl Game{
 		let hands = self.board.get_or_create_valid_hands(&self.current_side);
 		let index = self.rng.gen_range(0, hands.len());
 
+		// debug:
+		// dbg!("[DEBUG] selected hand:", hands[index]);
+
 		// ランダムに打つ
 		self.board = self.board.get_hand_applied_clone(&self.current_side, &hands[index]);
 
