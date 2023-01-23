@@ -88,9 +88,13 @@ impl Game{
 		// ゲームループ開始
 		loop{
 			self.show();
-			// 入力
-			let answer = Self::get_input();
-			if answer == "q" { break; }
+			// 入力待機
+			// - ここをコメントアウトすると一気に決着がつく。暴走注意
+			// let answer = Self::get_input();
+			// if answer == "q" { break; }
+
+			// 暴走防御
+			if self.current_turn > 10000 { break; }
 
 			// ゲームオーバー評価
 			// - evaluate_gamestate()して負けてたらゲームオーバーにする

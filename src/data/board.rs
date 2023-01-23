@@ -134,6 +134,9 @@ impl Board{
 				if to_cell.side == *side {
 					panic!("想定外呼び出し: 自分の駒がある場所にmoveしようとしました。。");
 				}
+				if from_cell.side != *side {
+					panic!("想定外呼び出し: 自分の駒以外をmoveしようとしました。。");
+				}
 
 				// 相手のコマを取ったかどうか
 				if to_cell.side != Side::Free {
@@ -155,10 +158,17 @@ impl Board{
 				// TODO: ひよこ→にわとりのプロモーション評価を忘れている。move_handにフラグ追加が必要？ AI専用コードなので常時プロモーションでいいかな？
 
 				// 移動先を移動元の駒に置き換える
-				new_cells[to.y as usize][to.x as usize] = from_cell;
+				// new_cells[to.y as usize][to.x as usize] = from_cell;
+				new_cells[to.y as usize][to.x as usize] = Cell{
+					side:from_cell.side,
+					koma:from_cell.koma
+				};
 
 				// 移動元を空白に置き換える
-				new_cells[from.y as usize][from.x as usize] = Cell{side:Side::Free, koma:Koma::Null};
+				new_cells[from.y as usize][from.x as usize] = Cell{
+					side:Side::Free,
+					koma:Koma::Null
+				};
 
 				exist_move_hand = true;
 			},
@@ -563,7 +573,7 @@ impl Board{
 						if target_cell.side == *side { continue; }
 
 						// 移動先が相手の攻撃可能場所でなければ着手可能手
-						if enemy_attackable_map[move_hand.to.y as usize][move_hand.to.x as usize] {
+						if !enemy_attackable_map[move_hand.to.y as usize][move_hand.to.x as usize] {
 							// 着手可能手に追加
 							hands.push(check_hand);
 						}
@@ -621,6 +631,11 @@ impl Board{
 				}
 			}
 
+			if hands.len() == 0 {
+				// 手がないのでトライ回避不能
+				self.states[side.to_index()] = SideState::GameOverWithTryable;
+			}
+
 			return hands;
 		}
 		// メモ: ここにくるということはpanicが妥当と思うが、設計見直してpanicの可能性をそもそも潰しておきたい気持ちも。
@@ -669,14 +684,14 @@ mod board_tests {
 			put_hand: None,
 			move_hand: Some(
 				Move {
-					from: Position{y:1,x:2},
+					from: Position{y:2,x:1},
 					to: Position{y:1,x:1}
 				}
 			)
 		};
 
 		// 手を反映したboardを取得する
-		let new_board = board.get_hand_applied_clone(
+		let mut new_board = board.get_hand_applied_clone(
 			&Side::A, &hand
 		);
 
@@ -686,9 +701,23 @@ mod board_tests {
 		// test: Side::Bは手駒を何も持っていない
 		assert_eq!(new_board.tegomas[side_b_index].len(), 0);
 
+		// // DEBUG: ちょっとattackable_mapを出力
+		// dbg!(new_board.get_or_create_attackable_map(&Side::A));
+		// dbg!(new_board.get_or_create_attackable_map(&Side::B));
+
+		// // DEBUG:
+		// println!("{}",board.render());
+		// println!("{}",board.render_infomation(&Side::A));
+		// println!("{}",new_board.render());
+		// println!("{}",new_board.render_infomation(&Side::B));
+
 		// test: Side::Bは王手されている
-		// TODO: このテスト失敗する。なんだろう。falseになってるご様子。TODO。
-		// assert_eq!(new_board.get_or_create_is_checkmate(&Side::B), true);
+		assert_eq!(new_board.get_or_create_is_checkmate(&Side::B), true);
+
+		// test: Side::Bのhandsは4つある。
+		// - ライオンでひよこを取るか、ライオンを斜めに逃す (3手)
+		// - + 象でひよこを取る (1手)。合計4手
+		assert_eq!(new_board.get_or_create_valid_hands(&Side::B).len(), 4);
 
 	}
 }
