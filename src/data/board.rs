@@ -141,12 +141,14 @@ impl Board{
 				// 相手のコマを取ったかどうか
 				if to_cell.side != Side::Free {
 					// 手駒に追加
+					// 鶏を取った際はヒヨコに戻す
+					let new_koma = if to_cell.koma == Koma::Niwatori { Koma::Hiyoko } else { to_cell.koma };
 					match to_cell.side {
 						Side::A => {
-							tegoma_side_b.push(to_cell.koma);
+							tegoma_side_b.push(new_koma);
 						},
 						Side::B => {
-							tegoma_side_a.push(to_cell.koma);
+							tegoma_side_a.push(new_koma);
 						},
 						_ => {
 							panic!("ここには来ないはず")
@@ -155,15 +157,22 @@ impl Board{
 					
 				}
 
-				// TODO: ひよこ→にわとりのプロモーション評価を忘れている。move_handにフラグ追加が必要？ AI専用コードなので常時プロモーションでいいかな？
-
-				// 移動先を移動元の駒に置き換える
-				// new_cells[to.y as usize][to.x as usize] = from_cell;
-				new_cells[to.y as usize][to.x as usize] = Cell{
-					side:from_cell.side,
-					koma:from_cell.koma
-				};
-
+				// 奥まで進んだヒヨコはニワトリにする
+				// undone: どうぶつしょうぎにはヒヨコ打ちが有効な局面が存在するという話もあるので、この処理は若干ロスかもしれない。実装の簡便さを優先
+				let try_y:i8 = if *side == Side::A { 0 } else { 3 };
+				if to.y == try_y && from_cell.koma == Koma::Hiyoko {
+					new_cells[to.y as usize][to.x as usize] = Cell{
+						side:from_cell.side,
+						koma:Koma::Niwatori
+					};
+				}else{
+					// 移動先を移動元の駒に置き換える
+					new_cells[to.y as usize][to.x as usize] = Cell{
+						side:from_cell.side,
+						koma:from_cell.koma
+					};
+				}
+				
 				// 移動元を空白に置き換える
 				new_cells[from.y as usize][from.x as usize] = Cell{
 					side:Side::Free,
@@ -293,14 +302,6 @@ impl Board{
 	// 評価処理
 	// ====================
 
-	// 評価処理: ゲームオーバー状態かどうかが判定済み状態にする
-	// - 評価中にフラグ変更しているのがあまりよくないかもしれない
-	// - 両方の陣営の「get_or_create_valid_hands()」を評価すれば、`self.state()`を評価しているところは全て通る
-	pub fn evaluate_gamestate(&mut self) {
-		self.get_or_create_valid_hands(&Side::A);
-		self.get_or_create_valid_hands(&Side::B);
-	}
-
 	// 評価処理: 効いている場所の一覧を取得する
 	// 計算済みならキャッシュから返す
 	pub fn get_or_create_attackable_map(&mut self, side:&Side) -> FlagBoard{
@@ -384,13 +385,13 @@ impl Board{
 
 	// 評価処理: sideがトライアブルかどうか
 	// - トライ可能ポジションが一つでもあればtrue
-	fn is_tryable(&self, side:&Side) -> bool {
+	fn is_tryable(&mut self, side:&Side) -> bool {
 		let count = self.get_or_create_tryable_positions(side).len();
 		return count > 0;
 	}
 
 	// 評価処理: sideがトライ可能か確認
-	fn get_or_create_tryable_positions(&self, side:&Side) -> Vec<Position> {
+	fn get_or_create_tryable_positions(&mut self, side:&Side) -> Vec<Position> {
 		// すでに計算済みかどうか確認
 		let result = self.tryable_positions[side.to_index()].clone();
 		match result {
@@ -411,7 +412,7 @@ impl Board{
 	}
 
 	// 評価処理: sideのトライ可能位置のリストを取得
-	fn create_tryable_positions(&self, side:&Side) -> Vec<Position> {
+	fn create_tryable_positions(&mut self, side:&Side) -> Vec<Position> {
 		let mut results: Vec<Position> = [].to_vec();
 
 		// トライ可能なライン
@@ -424,6 +425,8 @@ impl Board{
 		// トライ目標のライン
 		let try_y:i8 = if *side == Side::A { 0 } else { 3 };
 
+		let enemy_attackable_map = self.get_or_create_attackable_map(&side.reverse()).data;
+
 		for x in 0..3{
 			// トライ目標座標xがライオンの動ける範囲外かチェック
 			if lion_pos.x - 1 > x || lion_pos.x + 1 < x { continue; }
@@ -432,6 +435,9 @@ impl Board{
 
 			// 自分の駒がある場所には移動できない
 			if target_cell.side == *side { continue; }
+
+			// 相手が攻撃可能な場所はtryableではない
+			if enemy_attackable_map[try_y as usize][x as usize] { continue; }
 
 			// トライアブル
 			results.push(Position{x:x, y:try_y});
@@ -469,7 +475,7 @@ impl Board{
 			return self.create_valid_hands_when_checkmated(side);
 		}
 
-		// トライアブル時
+		// 相手がトライ可能時
 		if self.is_tryable(&side.reverse()) {
 			return self.create_valid_hands_when_tryable(side);
 		}
@@ -514,7 +520,6 @@ impl Board{
 					continue;
 				}
 
-				// 着手可能手に追加
 				let move_hand = Move{
 					from: pos,
 					to: target_pos
@@ -523,6 +528,14 @@ impl Board{
 					move_hand: Some(move_hand),
 					put_hand: None
 				};
+
+				// 手を動かしてみて、相手がトライ成功できる状態になる手は省く
+				let mut cloned = self.get_hand_applied_clone(side, &hand);
+				if cloned.is_tryable(&side.reverse()) {
+					continue;
+				}
+
+				// 着手可能手に追加
 				hands.push(hand);
 			}
 		}
@@ -609,9 +622,15 @@ impl Board{
 	// 評価処理: サブルーチン: トライアブル時の着手可能手の一覧を取得する
 	fn create_valid_hands_when_tryable(&mut self, side:&Side) -> Vec<Hand> {
 
+		// println!("到達チェック: create_valid_hands_when_tryable()");
+
 		let mut hands: Vec<Hand> = [].to_vec();
 
 		let enemy_tryable_positions = self.get_or_create_tryable_positions(&side.reverse());
+
+		// DEBUG
+		// println!("[DEBUG] side={} トライ可能場所一覧: {}", side.render(), enemy_tryable_positions.len());
+
 		if enemy_tryable_positions.len() > 1 {
 			// トライ回避不能
 			self.states[side.to_index()] = SideState::GameOverWithTryable;
@@ -621,10 +640,17 @@ impl Board{
 			// TODO: 全てのトライ防止手の一覧を取得する
 			// - 持ち駒があればこのポジションにPutするか
 			// - moveしてトライできなくなっている手の一覧を探す
-			let new_hands = self.create_all_move_hands(side);
+			let mut new_hands = self.create_all_move_hands(side);
+			let new_put_hands = &mut self.create_all_put_hands(side);
+			new_hands.append(new_put_hands);
+
+			// DEBUG
+			// println!("[DEBUG] new_put_hands() len: {}", new_put_hands.len());
+
 			for hand in new_hands {
 				// 手を打ってみる
-				let cloned = self.get_hand_applied_clone(side, &hand);
+				let mut cloned = self.get_hand_applied_clone(side, &hand);
+
 				// 相手がトライアブルじゃなくなっていたら着手可能手
 				if !cloned.is_tryable(&side.reverse()) {
 					hands.push(hand);
@@ -720,4 +746,175 @@ mod board_tests {
 		assert_eq!(new_board.get_or_create_valid_hands(&Side::B).len(), 4);
 
 	}
+
+
+	#[test]
+	fn test_tryable_board_state_1() {
+		// トライ周りがバグっているので、原因調査のため初手でトライ可能状態なマップを作成して評価していく
+
+		let mut try_board = Board{
+			cells: [
+				[
+					Cell{side: Side::B, koma: Koma::Lion},
+					Cell{side: Side::Free, koma: Koma::Null},
+					Cell{side: Side::Free, koma: Koma::Null},
+				],
+				[
+					Cell{side: Side::Free, koma: Koma::Null},
+					Cell{side: Side::Free, koma: Koma::Null},
+					Cell{side: Side::A, koma: Koma::Lion}
+				],
+				[
+					Cell{side: Side::Free, koma: Koma::Null},
+					Cell{side: Side::Free, koma: Koma::Null},
+					Cell{side: Side::Free, koma: Koma::Null},
+				],
+				[
+					Cell{side: Side::Free, koma: Koma::Null},
+					Cell{side: Side::Free, koma: Koma::Null},
+					Cell{side: Side::Free, koma: Koma::Null},
+				]
+			],
+			tegomas: Default::default(),
+			iter_x: 0,
+			iter_y: 0,
+			states: [
+				SideState::Playable,
+				SideState::Playable
+			],
+			attackable_maps: Default::default(),
+			is_checkmates: Default::default(),
+			tryable_positions: Default::default(),
+			valid_hands: Default::default(),
+		};
+
+		println!("{}",try_board.render());
+
+		// test: この盤面状態で、Side::Bはトライ回避はできない
+		assert_eq!(try_board.is_tryable(&Side::A), true);
+		assert_eq!(try_board.get_or_create_valid_hands(&Side::B).len(), 0);
+		assert_eq!(try_board.states[Side::B.to_index()], SideState::GameOverWithTryable);
+
+	}
+
+
+	#[test]
+	fn test_tryable_board_state_2() {
+		// Side::Bの手駒にキリンがあるのでトライを防止できるパターンの検証
+		let mut try_board = Board{
+			cells: [
+				[
+					Cell{side: Side::B, koma: Koma::Lion},
+					Cell{side: Side::Free, koma: Koma::Null},
+					Cell{side: Side::Free, koma: Koma::Null},
+				],
+				[
+					Cell{side: Side::Free, koma: Koma::Null},
+					Cell{side: Side::Free, koma: Koma::Null},
+					Cell{side: Side::A, koma: Koma::Lion}
+				],
+				[
+					Cell{side: Side::Free, koma: Koma::Null},
+					Cell{side: Side::Free, koma: Koma::Null},
+					Cell{side: Side::Free, koma: Koma::Null},
+				],
+				[
+					Cell{side: Side::Free, koma: Koma::Null},
+					Cell{side: Side::Free, koma: Koma::Null},
+					Cell{side: Side::Free, koma: Koma::Null},
+				]
+			],
+			tegomas:[
+				[].to_vec(),
+				[Koma::Kirin].to_vec(),
+			],
+			iter_x: 0,
+			iter_y: 0,
+			states: [
+				SideState::Playable,
+				SideState::Playable
+			],
+			attackable_maps: Default::default(),
+			is_checkmates: Default::default(),
+			tryable_positions: Default::default(),
+			valid_hands: Default::default(),
+		};
+
+		println!("{}",try_board.render());
+
+		// test: 手駒にキリンがあるのでトライを防止できる
+		assert_eq!(try_board.is_tryable(&Side::A), true);
+		assert_eq!(try_board.get_or_create_valid_hands(&Side::B).len(), 1);
+		assert_eq!(try_board.states[Side::B.to_index()], SideState::Playable);
+
+	}
+
+
+	#[test]
+	fn test_tryable_board_state_3() {
+		// トライアブル判定ミス調査
+		// - 以下の状態からSide::Aのb4のキリンがb3に移動して、Side::Bはa4にLionを移動させてしまった。
+		// - この状態でSide::Aは、「キリンを動かすと負ける」と判断して、このキリンを着手可能手から省かないといけない。
+		/*
+			x: ａ　ｂ　ｃ　: Side.B captured
+			==:============ : 
+			1:🐘Ａ🦒Ａ　　 : Side.A captured
+			2:　　🐥Ａ🐔Ａ : 
+			3:🦁Ｂ　　　　 :
+			4:🐘Ａ🦒Ａ🦁Ａ :
+
+			Side.A's turn. hands:6 ← これがおかしい。
+		*/
+		let mut try_board = Board{
+			cells: [
+				[
+					Cell{side: Side::A   , koma: Koma::Zou},
+					Cell{side: Side::A   , koma: Koma::Kirin},
+					Cell{side: Side::Free, koma: Koma::Null},
+				],
+				[
+					Cell{side: Side::Free, koma: Koma::Null},
+					Cell{side: Side::A   , koma: Koma::Hiyoko},
+					Cell{side: Side::A   , koma: Koma::Niwatori}
+				],
+				[
+					Cell{side: Side::B   , koma: Koma::Lion},
+					Cell{side: Side::Free, koma: Koma::Null},
+					Cell{side: Side::Free, koma: Koma::Null},
+				],
+				[
+					Cell{side: Side::A   , koma: Koma::Zou},
+					Cell{side: Side::A   , koma: Koma::Kirin},
+					Cell{side: Side::A   , koma: Koma::Lion},
+				]
+			],
+			tegomas:[
+				[].to_vec(),
+				[].to_vec(),
+			],
+			iter_x: 0,
+			iter_y: 0,
+			states: [
+				SideState::Playable,
+				SideState::Playable
+			],
+			attackable_maps: Default::default(),
+			is_checkmates: Default::default(),
+			tryable_positions: Default::default(),
+			valid_hands: Default::default(),
+		};
+
+		println!("{}",try_board.render());
+
+		// この際のhandsは6じゃない。b4 kirin→b3はトライ成功されるのでinvalid。
+		// 	 - a4 zou →b3
+		// 	 - c4 lion → c3
+		// 	 - b1 kirin → c1
+		// 	 - c2 niwatori → c1、c3
+		// - → validは上記の合計の「5」が正解。
+		assert_eq!(try_board.get_or_create_valid_hands(&Side::A).len(), 5);
+
+	}
+
+
 }

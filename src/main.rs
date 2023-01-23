@@ -97,8 +97,9 @@ impl Game{
 			if self.current_turn > 10000 { break; }
 
 			// ゲームオーバー評価
-			// - evaluate_gamestate()して負けてたらゲームオーバーにする
-			self.board.evaluate_gamestate();
+			// - get_or_create_valid_hands()評価で負けてるかどうかを判定
+			// TODO: 直感的じゃないな
+			self.board.get_or_create_valid_hands(&self.current_side);
 			let side_idx = if self.current_side == Side::A { 0 } else { 1 };
 			match self.board.states[side_idx] {
 				SideState::Playable =>{
@@ -122,7 +123,7 @@ impl Game{
 				println!("GAME OVER: 相手のトライを回避できない状態でした。");
 			},
 			SideState::GameOverWithStalemate => {
-				println!("GAME OVER: ステイルメイトです。多分: 失敗するトライ手しかない状態？");
+				println!("GAME OVER: 有効な手がありませんでした。");
 			},
 			_ => {
 				panic!("想定外動作: playableなのにprint_gameoverに来た？")
