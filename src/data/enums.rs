@@ -21,7 +21,7 @@ impl Side {
 		match self {
 			Side::A => Side::B,
 			Side::B => Side::A,
-			_ => Side::Free
+			_ => panic!("Side::Freeは反転できません。")
 		}
 	}
 	// 配列インデックスを返す
@@ -71,3 +71,44 @@ pub enum SideState {
 	GameOverWithStalemate, // ステイルメイト=生き残れる合法手が一つもない （※wikipediaによるとこうなる可能性はないはずなのだけど、このゲームではトライアブル評価をしているので発生しうる。合法手が全てトライアブル失敗というパターン）
 }
 
+
+
+// ******  ********    ******  ******  
+//   **    **        **          **    
+//   **    ********    ****      **    
+//   **    **              **    **    
+//   **    ********  ******      **    
+
+#[cfg(test)]
+mod enums_tests {
+	use super::*;
+
+	#[test]
+	fn test_side_index() {
+		// test: sideのto_index()が0と1であることを確認
+		assert_eq!(Side::A.to_index(), 0);
+		assert_eq!(Side::B.to_index(), 1);
+	}
+
+	#[test]
+	#[should_panic]
+	fn test_side_free_to_index_should_panic() {
+		// test: Side::Freeのto_index()はpanicする
+		Side::Free.to_index();
+	}
+
+	#[test]
+	fn test_side_reverse() {
+		// test: Sideをreverse()した時の挙動テスト
+		assert_eq!(Side::A.reverse(), Side::B);
+		assert_eq!(Side::B.reverse(), Side::A);
+		assert_ne!(Side::A.reverse(), Side::A);
+	}
+
+	#[test]
+	#[should_panic]
+	fn test_side_free_reverse_should_panic() {
+		// test: Side::Freeのreverse()はpanicする
+		Side::Free.reverse();
+	}
+}

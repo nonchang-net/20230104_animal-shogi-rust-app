@@ -4,6 +4,8 @@
  * - 各種評価メソッドと、評価済み情報のSideごとのOptionの配列を保持する
  */
 
+// extern crate board;
+
 use crate::data::types::{
 	Cell,
 };
@@ -15,11 +17,11 @@ use super::{enums::{Koma, Side, SideState}, constants::INITIAL_BOARD_DATA, types
 // 盤状態のフラグマップを表現する型
 #[derive(Debug, Clone)]
 pub struct FlagBoard{
-    pub data: [[bool; 3] ;4]
+	pub data: [[bool; 3] ;4]
 }
 
 impl FlagBoard{
-    fn new(flag:bool) -> FlagBoard{
+	fn new(flag:bool) -> FlagBoard{
 		return FlagBoard {
 			data: [
 				[flag,flag,flag],
@@ -28,7 +30,7 @@ impl FlagBoard{
 				[flag,flag,flag]
 			]
 		};
-    }
+	}
 }
 
 
@@ -675,4 +677,31 @@ impl Board{
 
 	}
 
+}
+
+
+
+// ******  ********    ******  ******  
+//   **    **        **          **    
+//   **    ********    ****      **    
+//   **    **              **    **    
+//   **    ********  ******      **    
+
+#[cfg(test)]
+mod board_tests {
+	use super::*;
+	#[test]
+	fn test_new_board_states() {
+		let board = Board::new();
+		let side_a_index = Side::A.to_index();
+		let side_b_index = Side::B.to_index();
+		
+		// test: new直後のstateはPlayableである
+		assert_eq!(board.states[side_a_index].unwrap(), SideState::Playable);
+		assert_eq!(board.states[side_b_index].unwrap(), SideState::Playable);
+
+		// test: new直後の持ち駒は初期化されていない
+		assert_eq!(board.tegomas[side_a_index], None);
+		assert_eq!(board.tegomas[side_b_index], None);
+	}
 }

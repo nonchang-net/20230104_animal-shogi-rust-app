@@ -1,5 +1,5 @@
 [package]
-name = "animal-shogi-rust-app"
+name = "animal_shogi_rust_app"
 version = "0.1.0"
 edition = "2021"
 
