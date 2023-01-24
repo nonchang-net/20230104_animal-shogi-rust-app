@@ -682,7 +682,9 @@ impl Board{
 
 #[cfg(test)]
 mod board_tests {
-	use super::*;
+	use rand::Rng;
+
+use super::*;
 	#[test]
 	fn test_new_board_states() {
 		let board = Board::new();
@@ -916,5 +918,56 @@ mod board_tests {
 
 	}
 
+    #[test]
+    #[ignore]
+    fn test_run_game_for_100_times() {
+		// 100回回してpanicが発生しないことをテストする
+		// - 普段のcargo testからは除外したいのでignore指定
+		let mut current_game = 1;
+		let mut current_turn = 1;
+		let mut current_side = Side::A;
+		let mut board = Board::new();
+		let mut rng = rand::prelude::thread_rng();
+		loop{
+
+			if current_game > 100 {
+				println!("current game over 100. finished.");
+				break;
+			}
+			loop{
+				if current_turn > 10000 {
+					panic!("current turn over 10000!");
+				}
+				current_turn += 1;
+				board.get_or_create_valid_hands(&current_side);
+		
+				let side_idx = if current_side == Side::A { 0 } else { 1 };
+				match board.states[side_idx] {
+					SideState::Playable =>{
+						// ランダムな手を一つ選択する
+						let hands = board.get_or_create_valid_hands(&current_side);
+						let index = rng.gen_range(0, hands.len());
+				
+						// debug:
+						// dbg!("[DEBUG] selected hand:", hands[index]);
+				
+						// ランダムに打つ
+						board = board.get_hand_applied_clone(&current_side, &hands[index]);
+				
+						// 次のターンに変更する
+						current_turn += 1;
+						current_side = current_side.reverse();
+					},
+					_ => {
+						println!("game finish. current_game: {}", current_game);
+						current_turn = 0;
+						current_game += 1;
+						break;
+					}
+				}
+			}
+		}
+
+    }
 
 }
