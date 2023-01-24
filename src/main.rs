@@ -1,4 +1,4 @@
-use data::enums::SideState;
+use data::{enums::SideState, types::Hand};
 use rand::prelude::*;
 
 mod data;
@@ -90,8 +90,8 @@ impl Game{
 			self.show();
 			// 入力待機
 			// - ここをコメントアウトすると一気に決着がつく。暴走注意
-			// let answer = Self::get_input();
-			// if answer == "q" { break; }
+			let answer = Self::get_input();
+			if answer == "q" { break; }
 
 			// 暴走防御
 			if self.current_turn > 10000 { break; }
@@ -134,19 +134,43 @@ impl Game{
 	// 相手ターンにして一手進める
 	pub fn next(&mut self) {
 
-		// ランダムな手を一つ選択する
+		// let hand = self.get_random_ai_hand();
+		let hand = self.get_highscore_ai_hand();
+
+		self.board = self.board.get_hand_applied_clone(&self.current_side, &hand);
+
+		// 次のターンに変更する
+		self.current_turn += 1;
+		self.current_side = self.current_side.reverse();
+	}
+
+	// 着手可能手から一番いいスコアの手を返すAI
+	fn get_highscore_ai_hand(&mut self) -> Hand {
+
+		let hands = self.board.get_or_create_valid_hands(&self.current_side);
+		let mut selected_hand = hands[0];
+		let mut highscore:i32 = -99999;
+		for hand in hands {
+			let mut new_board = self.board.get_hand_applied_clone(&self.current_side, &hand);
+			let score = new_board.calculate_score(&self.current_side);
+			if score > highscore {
+				highscore = score;
+				selected_hand = hand;
+			}
+		}
+		return selected_hand;
+	}
+
+	// ランダムな手を一つ選択するAI
+	fn get_random_ai_hand(&mut self) -> Hand {
+
 		let hands = self.board.get_or_create_valid_hands(&self.current_side);
 		let index = self.rng.gen_range(0, hands.len());
 
 		// debug:
 		// dbg!("[DEBUG] selected hand:", hands[index]);
 
-		// ランダムに打つ
-		self.board = self.board.get_hand_applied_clone(&self.current_side, &hands[index]);
-
-		// 次のターンに変更する
-		self.current_turn += 1;
-		self.current_side = self.current_side.reverse();
+		return hands[index].clone();
 	}
 
 	// 現在の情報を表示する

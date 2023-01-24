@@ -74,3 +74,18 @@ pub const KOMA_MOVERULE_NIWATORI: [Position; 6] = [
     Position{x: 1, y:-1}, // 右上
     Position{x: 0, y: 1}, // 下
 ];
+
+//ライオンが前に出た場合の1行あたりのスコア
+pub const LION_LINE_SCORE:i32 = 140 ;
+
+//「効く位置」いっこあたりのスコア
+pub const ATTACKABLE_POS_SCORE:i32 = 30 ;
+
+// 着手可能手一つあたりのスコア
+pub const ENABLE_MOVE_SCORE:i32 = 30;
+
+// トライ可能時のスコア
+pub const TRYABLE_SCORE:i32 = 250;
+
+// チェックメイト時のスコア
+pub const CHECKMATE_SCORE:i32 = 200;

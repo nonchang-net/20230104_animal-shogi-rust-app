@@ -6,11 +6,11 @@
 
 // extern crate board;
 
-use crate::data::types::{
+use crate::data::{types::{
 	Cell,
-};
+}, constants::ENABLE_MOVE_SCORE};
 
-use super::{enums::{Koma, Side, SideState}, constants::INITIAL_BOARD_DATA, types::{Position, Hand, Put, Move}};
+use super::{enums::{Koma, Side, SideState}, constants::{INITIAL_BOARD_DATA, ATTACKABLE_POS_SCORE, TRYABLE_SCORE, CHECKMATE_SCORE, LION_LINE_SCORE}, types::{Position, Hand, Put, Move}};
 
 
 
@@ -30,6 +30,17 @@ impl FlagBoard{
 				[flag,flag,flag]
 			]
 		};
+	}
+
+	// flagなセルの個数を数える
+	fn count_flags(&self, flag:bool) -> i32 {
+		let mut count = 0;
+		for x in 0..3 {
+			for y in 0..4 {
+				if self.data[y][x] == flag { count += 1; }
+			}
+		}
+		return count;
 	}
 }
 
@@ -253,6 +264,17 @@ impl Board{
 				panic!("検索したSideにKoma::Lionが見つかりませんでした。ゲームオーバー状態のBoardは評価できません。");
 			}
 		}
+	}
+
+	// ライオンの進捗評価
+	// - 一段上がることに評価関数の点数を上げるための算出
+	fn get_lion_progress(&self, side:&Side) -> i32 {
+		let lion_pos = self.search_lion_pos(side);
+		if *side == Side::A {
+			// 下から見ると、y座標を3で引いた値が進捗になる
+			return 3 - lion_pos.y as i32;
+		}
+		return lion_pos.y as i32;
 	}
 
 	// 汎用サブルーチン: sideのkomaを検索、最初に見つかったものを返す
@@ -668,6 +690,85 @@ impl Board{
 		// - is_tryable判定後にこのメソッドを呼んでいるので、上記のどちらかの分岐に入るはず。。
 		panic!("create_valid_hands_when_tryable()で分岐に入りませんでした。is_tryable()を確認せずに呼び出された可能性？")
 
+	}
+
+
+
+
+
+
+	//   ******    ****      ****    ******    ********  
+	// **        **    **  **    **  **    **  **        
+	//   ****    **        **    **  ******    ********  
+	//       **  **    **  **    **  **  **    **        
+	// ******      ****      ****    **    **  ********  
+
+
+	// 評価関数
+	// - boardをsideのターンとして評価したスコアを返す
+	// - 過去の実装をそのまま持ってきたのでエビデンスは不明
+	// - 5桁スコアは勝利確定として扱ってた様子
+	pub fn calculate_score (&mut self, side:&Side) -> i32 {
+
+		// 盤面状態評価
+		self.get_or_create_valid_hands(side);
+		
+		// 勝敗状態を返却
+		if self.states[side.to_index()] != SideState::Playable {
+			// println!("calc: {} は敗北しています。", side.render());
+			return -99999;
+		}
+		if self.states[side.reverse().to_index()] != SideState::Playable {
+			// println!("calc: {} は勝利状態です。", side.render());
+			return 99999;
+		}
+
+		// 点数計算開始
+		let mut score = 0;
+
+		// TODO: イテレータ書きたいが上手くいかないのでちょっとコメントアウト中
+		// for cell in self {
+		// }
+
+		// 盤上の駒の点数をside毎に評価
+		for x in 0..3{
+			for y in 0..4{
+				let cell = self.cells[y][x];
+				if cell.side == Side::Free { continue; }
+				let is_own = if cell.side == *side { 1 } else { -1 };
+				score += cell.koma.to_onboard_score() * is_own;
+			}
+		}
+
+		// 手駒の点数を評価
+		for tegoma in self.tegomas[side.to_index()].iter() {
+			score += tegoma.to_tegoma_score();
+		}
+		for tegoma in self.tegomas[side.reverse().to_index()].iter() {
+			score -= tegoma.to_tegoma_score();
+		}
+
+		// 着手可能手の多さを評価
+		score += self.get_or_create_valid_hands(side).len() as i32 * ENABLE_MOVE_SCORE;
+		score -= self.get_or_create_valid_hands(&side.reverse()).len() as i32 * ENABLE_MOVE_SCORE;
+
+		// 効いてる場所の数を点数に加える
+		score += self.get_or_create_attackable_map(side).count_flags(true) * ATTACKABLE_POS_SCORE;
+		score -= self.get_or_create_attackable_map(&side.reverse()).count_flags(true) * ATTACKABLE_POS_SCORE;
+
+		// Lionのトライ可能性評価で1ラインごとに加算
+		score += self.get_lion_progress(side) * LION_LINE_SCORE;
+		score -= self.get_lion_progress(&side.reverse()) * LION_LINE_SCORE;
+
+		// チェックメイト時は一定点数加算
+		// - この評価は番手のみ
+		score += if self.get_or_create_is_checkmate(side) { CHECKMATE_SCORE } else { 0 };
+
+		// 敵がトライ可能な時は一定点数減算
+		// - この評価は番手のみ
+		score -= if self.is_tryable(&side.reverse()) { TRYABLE_SCORE } else { 0 };
+		
+		return score;
 	}
 
 }
