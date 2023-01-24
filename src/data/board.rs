@@ -1073,4 +1073,74 @@ use super::*;
 
     }
 
+
+    #[test]
+    #[ignore]
+    fn test_run_game_for_100_times_with_random_ai_and_evaluate_ai() {
+		// ランダム版AIは、何度挑戦しても評価関数版AIに勝てないことを確認する
+		// - 評価関数版は一手先を読むので、ランダムに打ってる相手に負ける手は打たないだろう、という先入観を検証する
+		// - → 2000回ほど回したところ、一度なぜか評価関数版が負けた模様？ バグが残ってるかもしれないが再現せず。。
+		let mut current_game = 1;
+		let mut current_turn = 1;
+		let mut current_side = Side::A;
+		let mut board = Board::new();
+		let mut rng = rand::prelude::thread_rng();
+		loop{
+
+			if current_game > 100 {
+				println!("current game over 100. finished.");
+				break;
+			}
+			loop{
+				if current_turn > 10000 {
+					panic!("current turn over 10000!");
+				}
+				current_turn += 1;
+				board.get_or_create_valid_hands(&current_side);
+		
+				let side_idx = if current_side == Side::A { 0 } else { 1 };
+				match board.states[side_idx] {
+					SideState::Playable =>{
+
+						if current_side == Side::A {
+							// サイドAはランダムに打つ
+							// TODO: この辺テスト用のメソッドに切り出したい
+							let hands = board.get_or_create_valid_hands(&current_side);
+							let index = rng.gen_range(0, hands.len());
+
+							board = board.get_hand_applied_clone(&current_side, &hands[index]);
+						} else {
+							// サイドBは評価関数で打つ
+							let hands = board.get_or_create_valid_hands(&current_side);
+							let mut selected_hand = hands[0];
+							let mut highscore:i32 = -99999;
+							for hand in hands {
+								let mut new_board = board.get_hand_applied_clone(&current_side, &hand);
+								let score = new_board.calculate_score(&current_side.reverse()) * -1;
+								if score > highscore {
+									highscore = score;
+									selected_hand = hand;
+								}
+							}
+							board = board.get_hand_applied_clone(&current_side, &selected_hand);
+						}
+				
+						// 次のターンに変更する
+						current_turn += 1;
+						current_side = current_side.reverse();
+					},
+					_ => {
+						if current_side == Side::B {
+							panic!("評価関数版AIがランダムAIに敗北しました。");
+						}
+						println!("game finish. side {} win. current_game: {}", current_side.render(), current_game);
+						current_turn = 0;
+						current_game += 1;
+						break;
+					}
+				}
+			}
+		}
+	}
+
 }
