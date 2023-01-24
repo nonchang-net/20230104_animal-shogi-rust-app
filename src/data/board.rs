@@ -35,28 +35,28 @@ impl FlagBoard{
 
 
 // Boardの全てのCellを順に返すイテレータ
-impl Iterator for Board{
-	type Item = Cell;
-	fn next(&mut self) -> Option<Self::Item> {
-		self.iter_x += 1;
-		if self.iter_x >= 3 {
-			self.iter_x = 0;
-			self.iter_y += 1;
-			if self.iter_y >=4 {
-				// 終了している
-				return None;
-			}
-		}
-		return Some(self.cells[self.iter_y][self.iter_x]);
-	}
-	fn size_hint(&self) -> (usize, Option<usize>) {
-		return (12, Some(12));
-	}
-}
+// impl Iterator for Board{
+// 	type Item = Cell;
+// 	fn next(&mut self) -> Option<Self::Item> {
+// 		self.iter_x += 1;
+// 		if self.iter_x >= 3 {
+// 			self.iter_x = 0;
+// 			self.iter_y += 1;
+// 			if self.iter_y >=4 {
+// 				// 終了している
+// 				return None;
+// 			}
+// 		}
+// 		return Some(self.cells[self.iter_y][self.iter_x]);
+// 	}
+// 	fn size_hint(&self) -> (usize, Option<usize>) {
+// 		return (12, Some(12));
+// 	}
+// }
 
-impl ExactSizeIterator for Board{
-	fn len(&self) -> usize { return 12; }
-}
+// impl ExactSizeIterator for Board{
+// 	fn len(&self) -> usize { return 12; }
+// }
 
 #[allow(dead_code, unused_variables)]
 #[derive(Debug, Clone)]
@@ -69,8 +69,8 @@ pub struct Board{
 
 	// イテレータの現在処理位置
 	// TODO: イテレータ実装をトレイトあたりで分けてBoard自体から省きたいかな。評価時にcloneする意味がない
-	iter_x: usize,
-	iter_y: usize,
+	// iter_x: usize,
+	// iter_y: usize,
 
 	// sideの状態: 続行可能かゲームオーバー状態か
 	pub states: [SideState; 2],
@@ -96,8 +96,8 @@ impl Board{
 		let mut _board = Self{
 			cells: INITIAL_BOARD_DATA,
 			tegomas: Default::default(),
-			iter_x: 0,
-			iter_y: 0,
+			// iter_x: 0,
+			// iter_y: 0,
 			states: [
 				SideState::Playable,
 				SideState::Playable
@@ -217,8 +217,8 @@ impl Board{
 				tegoma_side_a,
 				tegoma_side_b
 			],
-			iter_x: 0,
-			iter_y: 0,
+			// iter_x: 0,
+			// iter_y: 0,
 			states: [
 				SideState::Playable,
 				SideState::Playable
@@ -778,8 +778,8 @@ use super::*;
 				]
 			],
 			tegomas: Default::default(),
-			iter_x: 0,
-			iter_y: 0,
+			// iter_x: 0,
+			// iter_y: 0,
 			states: [
 				SideState::Playable,
 				SideState::Playable
@@ -830,8 +830,8 @@ use super::*;
 				[].to_vec(),
 				[Koma::Kirin].to_vec(),
 			],
-			iter_x: 0,
-			iter_y: 0,
+			// iter_x: 0,
+			// iter_y: 0,
 			states: [
 				SideState::Playable,
 				SideState::Playable
@@ -894,8 +894,8 @@ use super::*;
 				[].to_vec(),
 				[].to_vec(),
 			],
-			iter_x: 0,
-			iter_y: 0,
+			// iter_x: 0,
+			// iter_y: 0,
 			states: [
 				SideState::Playable,
 				SideState::Playable
