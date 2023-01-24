@@ -474,12 +474,12 @@ impl Board{
 		let result = self.valid_hands[side.to_index()].clone();
 		match result {
 			Some(x) => {
-				// println!("DEBUG: get_or_create_valid_hands() get cached.");
+				// println!("DEBUG: get_or_create_valid_hands() get cached. side: {}", side.render());
 				return x.clone()
 			},
 			_ => {
 				// キーが存在しないので新規作成
-				// println!("DEBUG: get_or_create_valid_hands() new created.");
+				// println!("DEBUG: get_or_create_valid_hands() new created. side: {}", side.render());
 				let new_result = self.create_valid_hands(&side);
 				// self.valid_hands[side.to_index()] = Some(new_result);
 				return new_result;
@@ -750,7 +750,9 @@ impl Board{
 
 		// 着手可能手の多さを評価
 		score += self.get_or_create_valid_hands(side).len() as i32 * ENABLE_MOVE_SCORE;
-		score -= self.get_or_create_valid_hands(&side.reverse()).len() as i32 * ENABLE_MOVE_SCORE;
+		// note: 以下を評価したらライオンを取ってpanic
+		// - この評価は番手のみでokそう
+		// score -= self.get_or_create_valid_hands(&side.reverse()).len() as i32 * ENABLE_MOVE_SCORE;
 
 		// 効いてる場所の数を点数に加える
 		score += self.get_or_create_attackable_map(side).count_flags(true) * ATTACKABLE_POS_SCORE;
