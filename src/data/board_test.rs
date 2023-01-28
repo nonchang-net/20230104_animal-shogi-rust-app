@@ -1,12 +1,45 @@
 #[cfg(test)]
 pub mod board_test {
-	use rand::Rng;
-    use crate::data::board::Board;
-	use crate::data::enums::{Side, SideState, Koma};
-use crate::data::types::{Hand, Position, Move};
-use crate::data::{types::{
-		Cell,
-	}};
+	use rand::{Rng};
+	use crate::data::{
+		board::Board,
+		enums::{Side, SideState, Koma},
+		types::{
+			Cell,Hand, Position, Move
+		}
+	};
+
+	// ランダムに一手打って新しい盤面状態を返す
+	fn play_random_hand(
+		board:&mut Board,
+		side:&Side
+	) -> Board{
+		let mut rng = rand::prelude::thread_rng();
+		let hands = board.get_or_create_valid_hands(&side);
+		// debug:
+		// dbg!("[DEBUG] selected hand:", hands[index]);
+		let index = rng.gen_range(0, hands.len());
+		return board.get_hand_applied_clone(side, &hands[index]);
+	}
+
+	// 評価関数で一番高い手を打つ
+	fn play_evaluate_hand(
+		board:&mut Board,
+		side:&Side
+	) -> Board{
+		let hands = board.get_or_create_valid_hands(&&side);
+		let mut selected_hand = hands[0];
+		let mut highscore:i32 = -99999;
+		for hand in hands {
+			let mut new_board = board.get_hand_applied_clone(&&side, &hand);
+			let score = new_board.calculate_score(&&side.reverse()) * -1;
+			if score > highscore {
+				highscore = score;
+				selected_hand = hand;
+			}
+		}
+		return board.get_hand_applied_clone(&side, &selected_hand);
+	}
 	
     #[test]
 	fn test_new_board_states() {
@@ -237,6 +270,7 @@ use crate::data::{types::{
 		// 	 - b1 kirin → c1
 		// 	 - c2 niwatori → c1、c3
 		// - → validは上記の合計の「5」が正解。
+		// - → 修正done
 		assert_eq!(try_board.get_or_create_valid_hands(&Side::A).len(), 5);
 
 	}
@@ -250,7 +284,6 @@ use crate::data::{types::{
 		let mut current_turn = 1;
 		let mut current_side = Side::A;
 		let mut board = Board::new();
-		let mut rng = rand::prelude::thread_rng();
 		loop{
 
 			if current_game > 100 {
@@ -267,15 +300,8 @@ use crate::data::{types::{
 				let side_idx = if current_side == Side::A { 0 } else { 1 };
 				match board.states[side_idx] {
 					SideState::Playable =>{
-						// ランダムな手を一つ選択する
-						let hands = board.get_or_create_valid_hands(&current_side);
-						let index = rng.gen_range(0, hands.len());
-				
-						// debug:
-						// dbg!("[DEBUG] selected hand:", hands[index]);
-				
 						// ランダムに打つ
-						board = board.get_hand_applied_clone(&current_side, &hands[index]);
+						board = play_random_hand(&mut board, &current_side);
 				
 						// 次のターンに変更する
 						current_turn += 1;
@@ -304,7 +330,6 @@ use crate::data::{types::{
 		let mut current_turn = 1;
 		let mut current_side = Side::A;
 		let mut board = Board::new();
-		let mut rng = rand::prelude::thread_rng();
 		loop{
 
 			if current_game > 100 {
@@ -324,25 +349,10 @@ use crate::data::{types::{
 
 						if current_side == Side::A {
 							// サイドAはランダムに打つ
-							// TODO: この辺テスト用のメソッドに切り出したい
-							let hands = board.get_or_create_valid_hands(&current_side);
-							let index = rng.gen_range(0, hands.len());
-
-							board = board.get_hand_applied_clone(&current_side, &hands[index]);
+							board = play_random_hand(&mut board, &current_side);
 						} else {
 							// サイドBは評価関数で打つ
-							let hands = board.get_or_create_valid_hands(&current_side);
-							let mut selected_hand = hands[0];
-							let mut highscore:i32 = -99999;
-							for hand in hands {
-								let mut new_board = board.get_hand_applied_clone(&current_side, &hand);
-								let score = new_board.calculate_score(&current_side.reverse()) * -1;
-								if score > highscore {
-									highscore = score;
-									selected_hand = hand;
-								}
-							}
-							board = board.get_hand_applied_clone(&current_side, &selected_hand);
+							board = play_evaluate_hand(&mut board, &current_side);
 						}
 				
 						// 次のターンに変更する
