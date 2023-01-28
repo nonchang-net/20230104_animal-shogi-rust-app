@@ -781,21 +781,27 @@ impl Board{
 	) -> Hand {
 		let hands = self.get_or_create_valid_hands(&side);
 		let mut selected_hand = hands[0];
-		let mut highscore = -99999;
+		let mut high_score = -99999;
 		for hand in hands {
 			let mut new_board = self.get_hand_applied_clone(&side, &hand);
-			let score = self::get_negamax_score(
+
+			// note: 相手の手を符号反転したスコアから再起評価していく
+			let new_score = -1 * self::get_negamax_score(
 				0,
 				3,
 				&mut new_board,
 				side.reverse(),
 				50000
 			);
-			if score > highscore {
-				highscore = score;
+			// DEBUG:
+			// println!("[DEBUG] negamax evaluate score:{}", new_score); 
+			if new_score > high_score {
+				high_score = new_score;
 				selected_hand = hand;
 			}
 		}
+		// DEBUG:
+		// println!("[DEBUG] negamax selected score:{}", high_score); 
 		return selected_hand;
 	}
 
