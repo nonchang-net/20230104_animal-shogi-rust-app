@@ -373,4 +373,56 @@ pub mod board_test {
 		}
 	}
 
+    #[test]
+    #[ignore]
+    fn test_run_game_for_100_times_with_negamax_ai_and_evaluate_ai() {
+		// 評価関数版AIは、何度挑戦してもnegamax版AIに勝てないことを確認する
+		let mut current_game = 1;
+		let mut current_turn = 1;
+		let mut current_side = Side::A;
+		let mut board = Board::new();
+		loop{
+
+			if current_game > 100 {
+				println!("current game over 100. finished.");
+				break;
+			}
+			loop{
+				if current_turn > 10000 {
+					panic!("current turn over 10000!");
+				}
+				current_turn += 1;
+				board.get_or_create_valid_hands(&current_side);
+		
+				let side_idx = if current_side == Side::A { 0 } else { 1 };
+				match board.states[side_idx] {
+					SideState::Playable =>{
+
+						if current_side == Side::A {
+							// サイドAはnegamaxで打つ
+							let hand = board.get_next_hand_with_negamax(&current_side);
+							board = board.get_hand_applied_clone(&current_side, &hand);
+						} else {
+							// サイドBは評価関数で打つ
+							board = play_evaluate_hand(&mut board, &current_side);
+						}
+				
+						// 次のターンに変更する
+						current_turn += 1;
+						current_side = current_side.reverse();
+					},
+					_ => {
+						if current_side == Side::A {
+							panic!("negamax AIが評価関数版AIに敗北しました。");
+						}
+						println!("game finish. side {} win. current_game: {}", current_side.render(), current_game);
+						current_turn = 0;
+						current_game += 1;
+						break;
+					}
+				}
+			}
+		}
+	}
+
 }

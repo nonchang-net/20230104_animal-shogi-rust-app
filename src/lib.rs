@@ -46,8 +46,8 @@ impl GameRunner{
 			self.show();
 			// 入力待機
 			// - ここをコメントアウトすると一気に決着がつく。暴走注意
-			// let answer = Self::get_input();
-			// if answer == "q" { break; }
+			let answer = Self::get_input();
+			if answer == "q" { break; }
 
 			// 暴走防御
 			if self.current_turn > 10000 { break; }
@@ -93,9 +93,18 @@ impl GameRunner{
 		// テスト中のAIパターン色々
 		// let hand = self.get_random_ai_hand();
 		// let hand = self.get_highscore_ai_hand();
-		let hand = self.get_highscore_ai_with_random();
+		// let hand = self.get_highscore_ai_with_random();
+		// let hand = self.board.get_next_hand_with_negamax(&self.current_side);
+		// self.board = self.board.get_hand_applied_clone(&self.current_side, &hand);
 
-		self.board = self.board.get_hand_applied_clone(&self.current_side, &hand);
+		// Side::AとBでAIを分けてみる
+		if self.current_side == Side::A {
+			let hand = self.board.get_next_hand_with_negamax(&self.current_side);
+			self.board = self.board.get_hand_applied_clone(&self.current_side, &hand);
+		}else{
+			let hand = self.get_highscore_ai_with_random();
+			self.board = self.board.get_hand_applied_clone(&self.current_side, &hand);
+		}
 
 		// 次のターンに変更する
 		self.current_turn += 1;

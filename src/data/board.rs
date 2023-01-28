@@ -773,4 +773,81 @@ impl Board{
 		return score;
 	}
 
+
+	// 盤面状態を元に、次の1手をnegamax先読みして決定する
+	pub fn get_next_hand_with_negamax(
+		&mut self,
+		side: &Side
+	) -> Hand {
+		let hands = self.get_or_create_valid_hands(&side);
+		let mut selected_hand = hands[0];
+		let mut highscore = -99999;
+		for hand in hands {
+			let mut new_board = self.get_hand_applied_clone(&side, &hand);
+			let score = self::get_negamax_score(
+				0,
+				3,
+				&mut new_board,
+				side.reverse(),
+				50000
+			);
+			if score > highscore {
+				highscore = score;
+				selected_hand = hand;
+			}
+		}
+		return selected_hand;
+	}
+
+}
+
+
+// negamax本体
+// - 再起処理で先読み累計スコアを返す
+// - 間違って内部状態を持たせたくないのでstruct Board外に移動
+pub(crate) fn get_negamax_score(
+	depth: i8,
+	max_depth: i8,
+	board: &mut Board,
+	current_side: Side,
+	limit_score: i32
+) -> i32 {
+	let new_depth = depth + 1;
+	let current_score = board.calculate_score(&current_side);
+
+	// 	if(TemporaryState.evaluateCount > 1000000){
+	// 		console.log(`evaluateCount > 1000000: 処理が多いので一旦停止`)
+	// 		return this.Score()
+	// 	}
+
+	// 停止条件評価
+	if new_depth > max_depth ||
+		current_score > limit_score ||
+		current_score < (limit_score * -1)
+	{
+		// DEBUG:
+		// println!("[DEBUG] negamax return. depth:{}, score:{}", new_depth, current_score);
+		return current_score;
+	}
+
+	let mut high_score = -999999;
+
+	let hands = board.get_or_create_valid_hands(&current_side);
+	for hand in hands {
+		let mut new_board = board.get_hand_applied_clone(&current_side, &hand);
+
+		// 符号反転して相手側スコアを再起評価
+		let new_score = -1 * self::get_negamax_score(
+			new_depth,
+			max_depth,
+			&mut new_board,
+			current_side.reverse(),
+			limit_score
+		);
+
+		if new_score > high_score {
+			high_score = new_score;
+		}
+	}
+	return high_score;
 }
