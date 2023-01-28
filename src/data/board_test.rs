@@ -214,12 +214,12 @@ pub mod board_test {
 		// - 以下の状態からSide::Aのb4のキリンがb3に移動して、Side::Bはa4にLionを移動させてしまった。
 		// - この状態でSide::Aは、「キリンを動かすと負ける」と判断して、このキリンを着手可能手から省かないといけない。
 		/*
-			x: ａ　ｂ　ｃ　: Side.B captured
+			::: ａ　ｂ　ｃ　: Side.B captured
 			==:============ : 
-			1:🐘Ａ🦒Ａ　　 : Side.A captured
-			2:　　🐥Ａ🐔Ａ : 
-			3:🦁Ｂ　　　　 :
-			4:🐘Ａ🦒Ａ🦁Ａ :
+			:1:🐘Ａ🦒Ａ　　 : Side.A captured
+			:2:　　🐥Ａ🐔Ａ : 
+			:3:🦁Ｂ　　　　 :
+			:4:🐘Ａ🦒Ａ🦁Ａ :
 
 			Side.A's turn. hands:6 ← これがおかしい。
 		*/
@@ -274,6 +274,104 @@ pub mod board_test {
 		assert_eq!(try_board.get_or_create_valid_hands(&Side::A).len(), 5);
 
 	}
+
+
+	#[test]
+	fn test_winnable_tegoma_state_1() {
+		// 20230128: 勝利できる状態でなぜか手駒を打たない状況があったので検証
+		// ::: ａ　ｂ　ｃ　: Side.B captured
+		// ==:============ : 
+		// :1:　　🦒Ａ　　 : Side.A captured
+		// :2:🦁Ｂ　　🐘Ａ : 🐘🦒🐥
+		// :3:🐥Ｂ　　🦁Ａ :
+		// :4:　　　　　　 :
+		// - この盤面の時に、negamax版AIで、Side::Aがb2にキリンを打てば勝利する状態なのだけど、なぜかb1のキリンをb2に動かして千日手に陥っていた。
+
+		// 20230128 done:
+		// - ようやく原因判明。
+		// - negamax評価の際に、「n手先で確実に勝てる手」と「より少ない手数で勝てる手」の点数が同じため上書きされていた。
+		// - 今回はdepthの浅い方の勝利手を優先するように修正した。
+
+		let mut board = Board{
+			cells: [
+				[
+					Cell{side: Side::Free, koma: Koma::Null},
+					Cell{side: Side::A   , koma: Koma::Kirin},
+					Cell{side: Side::Free, koma: Koma::Null},
+				],
+				[
+					Cell{side: Side::B   , koma: Koma::Lion},
+					Cell{side: Side::Free, koma: Koma::Null},
+					Cell{side: Side::A   , koma: Koma::Zou}
+				],
+				[
+					Cell{side: Side::B   , koma: Koma::Hiyoko},
+					Cell{side: Side::Free, koma: Koma::Null},
+					Cell{side: Side::A   , koma: Koma::Lion},
+				],
+				[
+					Cell{side: Side::Free, koma: Koma::Null},
+					Cell{side: Side::Free, koma: Koma::Null},
+					Cell{side: Side::Free, koma: Koma::Null},
+				]
+			],
+			tegomas:[
+				[Koma::Zou, Koma::Kirin, Koma::Hiyoko].to_vec(),
+				[].to_vec(),
+			],
+			states: [
+				SideState::Playable,
+				SideState::Playable
+			],
+			attackable_maps: Default::default(),
+			is_checkmates: Default::default(),
+			tryable_positions: Default::default(),
+			valid_hands: Default::default(),
+		};
+
+		println!("{}",board.render());
+		println!("{}",board.render_infomation(&Side::A));
+		let hands = board.get_or_create_valid_hands(&Side::A);
+
+		let mut side_b_state = SideState::Playable;
+
+		// 調査:
+		// 置いたら勝利できる手があるか探す
+		// - b2に手駒のkirinを配置すれば勝利できる状態なのは見た感じ確定している
+		for hand in hands {
+			let mut new_board = board.get_hand_applied_clone(&Side::A, &hand);
+			// 評価
+			new_board.get_or_create_valid_hands(&Side::B);
+
+			let new_b_state = new_board.states[Side::B.to_index()];
+			if new_b_state != SideState::Playable{
+				side_b_state = new_b_state;
+				// debug: 勝利手をdump
+				dbg!(hand);
+			}
+			// dbg!(new_board.states[Side::B.to_index()]);
+		}
+
+		// 検索したら勝利手は三種類あった。
+		// - ここで一応、Playable以外の手があったかどうかをassert
+		assert_ne!(side_b_state, SideState::Playable);
+
+		// 問題のnegamaxに評価させた結果を見る
+		let negamax_hand = board.get_next_hand_with_negamax(
+			&Side::A
+		);
+		println!("negamax's choice...");
+		dbg!(negamax_hand);
+
+		// negamaxの手を適用した結果がplayableかどうかをassertする
+		let mut negamax_applyed_board = board.get_hand_applied_clone(&Side::A, &negamax_hand);
+		negamax_applyed_board.get_or_create_valid_hands(&Side::B);
+		assert_ne!(negamax_applyed_board.states[Side::B.to_index()], SideState::Playable);
+
+
+	}
+
+
 
     #[test]
     #[ignore]

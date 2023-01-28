@@ -18,14 +18,14 @@ impl Board {
 		let mut result = String::new();
 
 		// ヘッダーとstatus枠表示
-		result.push_str("  : ａ　ｂ　ｃ　: Side.B captured\n");
+		result.push_str("**: ａ　ｂ　ｃ　: Side.B captured\n");
 		result.push_str("==:============ : ");
 		result.push_str(self.render_motigoma(&Side::B).as_str());
 		result.push('\n');
 
 		// セル表示開始
 		for (index, line) in self.cells.iter().enumerate() {
-			result.push_str(format!(" {}:", index+1).as_str());
+			result.push_str(format!(":{}:", index+1).as_str());
 			for cell in line.iter() {
 				result.push_str(cell.render().as_str())
 			}

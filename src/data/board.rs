@@ -718,10 +718,12 @@ impl Board{
 			// println!("calc: {} は敗北しています。", side.render());
 			return -99999;
 		}
-		if self.states[side.reverse().to_index()] != SideState::Playable {
-			// println!("calc: {} は勝利状態です。", side.render());
-			return 99999;
-		}
+
+		// メモ: side側のvalid handsでは相手の勝利状態は評価できないので多分このコードは不要なはず……？
+		// if self.states[side.reverse().to_index()] != SideState::Playable {
+		// 	// println!("calc: {} は勝利状態です。", side.render());
+		// 	return 99999;
+		// }
 
 		// 点数計算開始
 		let mut score = 0;
@@ -793,11 +795,14 @@ impl Board{
 				side.reverse(),
 				50000
 			);
-			// DEBUG:
-			// println!("[DEBUG] negamax evaluate score:{}", new_score); 
+
 			if new_score > high_score {
 				high_score = new_score;
 				selected_hand = hand;
+
+				// DEBUG:
+				// println!("[DEBUG] HighScoreが更新されました。 high_score:{high_score}");
+				// dbg!(selected_hand);
 			}
 		}
 		// DEBUG:
@@ -843,13 +848,14 @@ pub(crate) fn get_negamax_score(
 		let mut new_board = board.get_hand_applied_clone(&current_side, &hand);
 
 		// 符号反転して相手側スコアを再起評価
+		// メモ: 手が浅い方の勝利手を優先するように、new_depthを引く
 		let new_score = -1 * self::get_negamax_score(
 			new_depth,
 			max_depth,
 			&mut new_board,
 			current_side.reverse(),
 			limit_score
-		);
+		) - new_depth as i32;
 
 		if new_score > high_score {
 			high_score = new_score;
