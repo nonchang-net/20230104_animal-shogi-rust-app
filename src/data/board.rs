@@ -143,10 +143,10 @@ impl Board{
 
 				// debug
 				if to_cell.side == *side {
-					panic!("想定外呼び出し: 自分の駒がある場所にmoveしようとしました。。");
+					panic!("cannot move to self koma pos.");
 				}
 				if from_cell.side != *side {
-					panic!("想定外呼び出し: 自分の駒以外をmoveしようとしました。。");
+					panic!("other side koma cannot movable.");
 				}
 
 				// 相手のコマを取ったかどうか
@@ -162,7 +162,7 @@ impl Board{
 							tegoma_side_a.push(new_koma);
 						},
 						_ => {
-							panic!("ここには来ないはず")
+							panic!("unreachable?")
 						}
 					}
 					
@@ -210,13 +210,13 @@ impl Board{
 						tegoma_side_b.remove(put_hand.index as usize);
 					},
 					_ => {
-						panic!("ここには来ないはず")
+						panic!("unreachable?")
 					}
 				}
 			},
 			None => {
 				if !exist_move_hand {
-					panic!("想定外コード: handがput/move両方ともNoneでした")
+					panic!("invalid hand. require move or put.")
 				}
 			}
 		}
@@ -261,7 +261,7 @@ impl Board{
 			_ => {
 				// TODO: どっちサイドでpanicしたか出力したいものの、dataクラスはview処理を使いたくないので悩み中。一旦side情報なしでpanicしておく
 				// let str = format!("検索したSideにKoma::Lionが見つかりませんでした。ゲームオーバー状態のBoardは評価できません。", koma.render());
-				panic!("検索したSideにKoma::Lionが見つかりませんでした。ゲームオーバー状態のBoardは評価できません。");
+				panic!("lion not found.");
 			}
 		}
 	}
@@ -688,7 +688,7 @@ impl Board{
 		}
 		// メモ: ここにくるということはpanicが妥当と思うが、設計見直してpanicの可能性をそもそも潰しておきたい気持ちも。
 		// - is_tryable判定後にこのメソッドを呼んでいるので、上記のどちらかの分岐に入るはず。。
-		panic!("create_valid_hands_when_tryable()で分岐に入りませんでした。is_tryable()を確認せずに呼び出された可能性？")
+		panic!("unreachable?")
 
 	}
 
@@ -779,6 +779,7 @@ impl Board{
 	// 盤面状態を元に、次の1手をnegamax先読みして決定する
 	pub fn get_next_hand_with_negamax(
 		&mut self,
+		max_depth: i8,
 		side: &Side
 	) -> Hand {
 		let hands = self.get_or_create_valid_hands(&side);
@@ -790,7 +791,7 @@ impl Board{
 			// note: 相手の手を符号反転したスコアから再起評価していく
 			let new_score = -1 * self::get_negamax_score(
 				0,
-				3,
+				max_depth,
 				&mut new_board,
 				side.reverse(),
 				50000

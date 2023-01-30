@@ -21,7 +21,7 @@ impl Side {
 		match self {
 			Side::A => Side::B,
 			Side::B => Side::A,
-			_ => panic!("Side::Freeは反転できません。")
+			_ => panic!("cannot reverse() Side::Free")
 		}
 	}
 	// 配列インデックスを返す
@@ -29,7 +29,7 @@ impl Side {
 		match self {
 			Side::A => 0,
 			Side::B => 1,
-			_ => panic!("Side::Freeは配列インデックスにできません。")
+			_ => panic!("cannot to index Side::Free")
 		}
 	}
 }

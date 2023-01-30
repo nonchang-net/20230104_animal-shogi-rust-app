@@ -96,7 +96,7 @@ impl GameRunner{
 
         // Side::AとBでAIを分けてみる
         if self.current_side == Side::A {
-            let hand = self.board.get_next_hand_with_negamax(&self.current_side);
+            let hand = self.board.get_next_hand_with_negamax(3,&self.current_side);
             self.board = self.board.get_hand_applied_clone(&self.current_side, &hand);
         }else{
             let hand = self.get_highscore_ai_with_random();

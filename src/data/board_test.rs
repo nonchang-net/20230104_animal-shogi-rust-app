@@ -358,6 +358,7 @@ pub mod board_test {
 
 		// 問題のnegamaxに評価させた結果を見る
 		let negamax_hand = board.get_next_hand_with_negamax(
+			3,
 			&Side::A
 		);
 		println!("negamax's choice...");
@@ -502,7 +503,7 @@ pub mod board_test {
 							board = play_random_hand(&mut board, &current_side);
 						} else {
 							// サイドBはnegamaxで打つ
-							let hand = board.get_next_hand_with_negamax(&current_side);
+							let hand = board.get_next_hand_with_negamax(3, &current_side);
 							board = board.get_hand_applied_clone(&current_side, &hand);
 						}
 				
